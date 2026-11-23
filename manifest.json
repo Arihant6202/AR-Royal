@@ -1,0 +1,10 @@
+{
+  "name": "AR ROYAL - 2D Battle Royale",
+  "short_name": "AR ROYAL",
+  "description": "5-Level Landscape 2D Top-Down Battle Royale Web Game",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b1118",
+  "theme_color": "#f59e0b"
+}
