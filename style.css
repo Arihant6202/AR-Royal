@@ -951,3 +951,77 @@ html, body {
 .ff-install.hidden { display: none !important; }
 @keyframes installPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.6); } 50% { box-shadow: 0 0 0 8px rgba(245,158,11,0); } }
 .ff-panel .level-list { max-height: 62vh; overflow-y: auto; }
+
+
+/* AR ROYAL upgrade: scroll-safe panels, logo and complete account/settings UI */
+.ff-brand { display:flex; align-items:center; gap:8px; }
+.ff-brand img { width:42px; height:42px; object-fit:contain; filter:drop-shadow(0 0 10px rgba(0,190,255,.45)); }
+.ff-brand span { color:#fbbf24; }
+.ff-panel { min-height:0; }
+.panel-body {
+  min-height:0;
+  height:0;
+  flex:1 1 auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+  touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(245,158,11,.55) rgba(0,0,0,.2);
+  padding-bottom:max(14px, env(safe-area-inset-bottom));
+}
+.panel-body > section { min-height:0; }
+.panel-body .level-list,
+.panel-body .shop-list,
+.panel-body .outfit-grid,
+.panel-body .reward-rules,
+.panel-body [data-panel] {
+  touch-action:pan-y;
+}
+.level-card { width:100%; text-align:left; color:inherit; font:inherit; }
+.level-card.locked { opacity:.48; cursor:not-allowed; filter:saturate(.55); }
+.lvl-badge.locked-badge { color:#94a3b8; background:rgba(100,116,139,.18); }
+.lvl-badge.current-badge { color:#fde68a; background:rgba(245,158,11,.18); }
+.mission-select-btn { width:100%; margin-top:10px; position:sticky; bottom:0; z-index:2; box-shadow:0 -8px 18px rgba(0,0,0,.35); }
+.profile-panel-card {
+  display:flex; align-items:center; gap:12px; padding:12px;
+  border:1px solid rgba(245,158,11,.42); border-radius:12px;
+  background:linear-gradient(120deg,rgba(245,158,11,.16),rgba(15,23,42,.72));
+}
+.profile-avatar-large {
+  width:62px;height:62px; flex:0 0 62px; display:grid; place-items:center;
+  border:2px solid #fbbf24;border-radius:14px;font-size:21px;font-weight:1000;
+  box-shadow:0 0 18px rgba(245,158,11,.25);
+}
+.profile-main-info { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
+.profile-main-info strong { font-size:15px; letter-spacing:.7px; overflow-wrap:anywhere; }
+.profile-main-info span { color:#fbbf24; font-size:10px; font-weight:900; }
+.profile-main-info small { color:#cbd5e1; font-size:9px; }
+.profile-xp-track { height:6px; border-radius:9px; background:#111827; overflow:hidden; }
+.profile-xp-track i { display:block; width:0; height:100%; background:linear-gradient(90deg,#38bdf8,#fbbf24); }
+.profile-stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:7px; margin:10px 0; }
+.profile-stats-grid div { display:flex; flex-direction:column; gap:3px; padding:10px; border-radius:9px; background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.09); }
+.profile-stats-grid b { color:#fbbf24; font-size:18px; }
+.profile-stats-grid span { color:#94a3b8; font-size:9px; font-weight:900; letter-spacing:.8px; }
+.profile-note { color:#aab7c8; font-size:11px; line-height:1.5; }
+.setting-line { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:8px 0; padding:8px 9px; border-radius:9px; background:rgba(255,255,255,.045); font-size:10px; font-weight:800; }
+.setting-line .seg-group { min-width:54%; }
+.toggle-pill { min-width:54px; padding:6px 12px; border:1px solid rgba(255,255,255,.18); border-radius:20px; color:#cbd5e1; background:#263244; font-size:10px; font-weight:900; }
+.toggle-pill.active { color:#082f1b; background:#4ade80; border-color:#4ade80; }
+#returnMatchBtn { width:100%; margin-top:10px; }
+button:disabled { cursor:not-allowed; }
+.ff-panel .outfit-grid, .ff-panel .shop-list, .ff-panel .level-list { padding-bottom:6px; }
+@media (max-width:640px) {
+  .ff-brand img { width:32px;height:32px; }
+  .ff-panel { width:min(420px,calc(100vw - 82px)); }
+}
+@media (max-height:440px) {
+  .profile-panel-card { padding:7px; }
+  .profile-avatar-large { width:46px;height:46px;flex-basis:46px; }
+  .profile-stats-grid div { padding:6px; }
+}
+
+/* The global game gesture lock must not block scrolling inside menu surfaces. */
+.panel-body, .panel-body *, .ff-panel .level-list, .ff-panel .shop-list, .ff-panel .outfit-grid { touch-action:pan-y !important; }
+.panel-body { overscroll-behavior:contain; }

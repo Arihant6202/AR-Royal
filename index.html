@@ -10,7 +10,7 @@
   <link rel="icon" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="AR ROYAL" />
-  <title>AR ROYAL — 2D Landscape Battle Royale</title>
+  <title>AR ROYAL — Battle Royale</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="hud-compact">
@@ -157,7 +157,7 @@
         </div>
       </button>
 
-      <div class="ff-brand">AR <span>ROYAL</span></div>
+      <div class="ff-brand"><img src="ar-royal-logo.png" alt="AR ROYAL Crown Logo" /><span>AR ROYAL</span></div>
 
       <div class="ff-currency">
         <div class="cur-chip"><span>🪙</span><b id="ffGold">0</b></div>
@@ -227,9 +227,23 @@
         <button id="panelClose" class="ff-icon-btn" type="button">✕</button>
       </div>
       <div class="panel-body">
+        <section data-panel="profile" class="hidden">
+          <div class="profile-panel-card">
+            <div class="profile-avatar-large" id="profileAvatarLarge">AR</div>
+            <div class="profile-main-info"><strong id="profileDisplayName">PLAYER</strong><span id="profileRankTitle">ROOKIE</span><div class="profile-xp-track"><i id="profileXpFill"></i></div><small id="profileXpText">0 / 150 XP</small></div>
+          </div>
+          <div class="profile-stats-grid">
+            <div><b id="profileMatches">0</b><span>MATCHES</span></div>
+            <div><b id="profileKills">0</b><span>KILLS</span></div>
+            <div><b id="profileWins">0</b><span>WINS</span></div>
+            <div><b id="profileWinRate">0%</b><span>WIN RATE</span></div>
+          </div>
+          <div class="panel-sub">ACCOUNT OVERVIEW</div>
+          <p class="profile-note">Your campaign progress, unlocked equipment and rewards are saved on this device.</p>
+        </section>
         <section data-panel="missions" class="hidden">
           <div class="panel-sub">SELECT MISSION (20 LEVELS)</div>
-          <div id="levelList" class="level-list"></div>
+          <div id="levelList" class="level-list"></div><button id="selectMissionBtn" class="btn btn-primary mission-select-btn" type="button">SELECT MISSION</button>
         </section>
 
         <section data-panel="armory" class="hidden">
@@ -276,8 +290,13 @@
           </div>
           <div class="controls-hint">
             <span><b>PC:</b> WASD Move • Shift Run • Mouse Aim/Fire • RMB/Q Scope • R Reload • E Loot • H Heal</span>
-            <span><b>Mobile:</b> Dual Joysticks • 📱 button se toggle</span>
+            <span><b>Mobile:</b> Left joystick move • Right joystick aim/fire • FIRE • SCOPE • RLD</span>
           </div>
+          <div class="panel-sub">AUDIO & DISPLAY</div>
+          <div class="setting-line"><span>Music / Sound</span><button id="settingsSoundBtn" class="toggle-pill active" type="button" aria-pressed="true">ON</button></div>
+          <div class="setting-line"><span>Graphics Quality</span><div class="seg-group" id="graphicsSelector"><button class="seg-btn" data-graphics="low" type="button">LOW</button><button class="seg-btn active" data-graphics="medium" type="button">MED</button><button class="seg-btn" data-graphics="high" type="button">HIGH</button></div></div>
+          <div class="setting-line"><span>Vibration</span><button id="vibrationBtn" class="toggle-pill" type="button" aria-pressed="false">OFF</button></div>
+          <button id="returnMatchBtn" class="btn btn-primary hidden" type="button">RETURN TO MATCH</button>
         </section>
       </div>
     </div>
@@ -309,7 +328,7 @@
       </div>
       <div class="modal-actions">
         <button id="resumeBtn" class="btn btn-primary">▶ Resume</button>
-        <button id="restartBtn" class="btn btn-secondary">↻ Restart Level</button>
+        <button id="restartBtn" class="btn btn-secondary">↻ Restart Level</button>\n        <button id="pauseSettingsBtn" class="btn btn-ghost">⚙ Settings</button>
         <button id="quitLobbyBtn" class="btn btn-ghost">🏠 Lobby</button>
       </div>
     </div>
