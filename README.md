@@ -5,8 +5,8 @@
 ## Included Files
 - `index.html` — Main game page & Landscape HUD
 - `style.css` — Ultra-compact Landscape-first UI & mobile touch controls
-- `script.js` — 5-Level Campaign engine, articulated walk/run animations, AI bots & 5 distinct Web Audio gun sounds
-- `manifest.json` — Fullscreen Landscape PWA manifest
+- `script.js` — 10-Level Campaign engine, articulated walk/run animations, AI bots & 5 distinct Web Audio gun sounds
+- `manifest.json`, `sw.js`, `icon-*.png` — PWA (📲 INSTALL button ke liye)
 - `README.md` — GitHub Pages setup instructions
 
 ## Game Highlights
@@ -43,10 +43,42 @@
 - **Lobby pose preview:** IDLE / WALK / RUN buttons se side-view me chalta/daudta character dekho.
 - **Gun sounds (har gun alag):** M4A1, MP40, M1887, AWM, G18 — fire aur reload dono alag. Armory me 🔊 se sun sakte ho.
 
+## v3 Update: 20 Levels + Har Map ka Alag Structure + Install Button
+Har level up par **naya map, naya design** — shape ya structure dono alag.
+
+| Lvl | Map | Structure |
+|---|---|---|
+| 1 | Bermuda Outpost | ⭕ Khula island + 2 lakes |
+| 2 | Kalahari Sandstorm | Canyon walls + beech me oasis chamber |
+| 3 | Purgatory Bridge | Nadi + 3 pul + dono kinare fort + sandbags |
+| 4 | Alpine Snowbase | Double-ring ice fortress + inner keep |
+| 5 | Neon Citadel | ✚ Plus map: Citadel + 4 arm bunkers + BOSS |
+| 6 | Swamp Jungle | ⬠ Tedhi nadi + 3 lakdi ke pul |
+| 7 | Moonlit Ruins | ☾ Toote kamre + pillars |
+| 8 | Crimson Volcano | ♥ Lava nadi + 3 pathar ke pul |
+| 9 | Toxic Wasteland | ✡ Lab hub + toxic moat + 4 pul |
+| 10 | Galaxy Star Fortress | ★ Citadel + 5 outposts + BOSS + 18 bots |
+| 11 | Sunset Harbor | Octagon: samundar + piers + godown |
+| 12 | Sand Temple | T-shape: sanctum + pillars + gated corridor |
+| 13 | Frozen Lake | Beech me barf ki jheel + 4 igloo |
+| 14 | Rail Yard | L-shape: train-car deewarein |
+| 15 | Sewer Maze | Lanes + toxic nehar + BOSS |
+| 16 | Haunted Graveyard | Ulta triangle: qabron ki grid + mausoleum |
+| 17 | Magma Fortress | Octagon: ring wall + lava moat + 4 pul |
+| 18 | Lost Temple | Arrow shape: temple + ruins + ghana jungle |
+| 19 | Orbital Station | Hourglass: 2 chambers + patli galli |
+| 20 | Omega Arena | Octagon: ring + Citadel + 4 outposts + BOSS + 20 bots |
+
+- Lava aur toxic pools damage karte hain. Minimap me deewarein bhi dikhti hain.
+- Level clear karne par **"Level N ▶ New Map"** se agla map khulta hai.
+
+### 📲 Install Button
+Lobby ke top-right me **INSTALL** button. Android/Chrome par seedha install; iPhone Safari par Share → Add to Home Screen. Game **https** par host hona chahiye (GitHub Pages).
+
 ## GitHub Pages par Live Host Kaise Karein (Step-by-Step)
 1. Is `ar-royal.zip` ko apne computer ya phone me **Extract / Unzip** karein.
 2. GitHub.com par jayein aur ek **New Repository** banayein (jaise `ar-royal`, visibility **Public** rakhein).
-3. Repository me **Add file -> Upload files** par click karein aur unzip ki hui saari 5 files (`index.html`, `style.css`, `script.js`, `manifest.json`, `README.md`) upload karke **Commit changes** daba dein.
+3. Repository me **Add file -> Upload files** par click karein aur unzip ki hui saari files (`index.html`, `style.css`, `script.js`, `manifest.json`, `sw.js`, icons, `README.md`) upload karke **Commit changes** daba dein.
 4. Repository ke **Settings -> Pages** me jayein.
 5. **Branch** me `main` aur folder me `/ (root)` select karke **Save** karein.
 6. 1-2 minute me aapka live game link (`https://<your-username>.github.io/ar-royal/`) ready ho jayega!
