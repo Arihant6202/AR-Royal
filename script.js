@@ -311,9 +311,6 @@
   let selectedLevelId = 1;
   let gameSpeedMode = 'tactical';
   let hudSizeMode = 'compact';
-  let graphicsQuality = localStorage.getItem('ar_royal_graphics') || 'medium';
-  let vibrationEnabled = localStorage.getItem('ar_royal_vibration') === 'true';
-  document.body.dataset.graphics = graphicsQuality;
   let ignorePortraitGuard = false;
   let touchControlsEnabled = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 
@@ -489,7 +486,7 @@
   }
 
   function resizeCanvas() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, window.__AR_DPR_CAP || 2);
     canvas.width = Math.floor(window.innerWidth * dpr);
     canvas.height = Math.floor(window.innerHeight * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -497,33 +494,22 @@
   }
 
   // ---------- LOBBY UI BUILDER ----------
-  function highestUnlockedLevel() {
-    let next = 1;
-    while (next <= LEVELS.length && clearedLevels.has(next)) next++;
-    return Math.min(next, LEVELS.length);
-  }
-
   function renderLevelCards() {
+    if (ui.progressSummary) ui.progressSummary.textContent = `${clearedLevels.size}/${LEVELS.length} Cleared`;
+    if (!ui.levelList) { updateModeCard(); return; }
     ui.levelList.innerHTML = '';
-    ui.progressSummary.textContent = `${clearedLevels.size}/${LEVELS.length} Cleared`;
-    const currentId = highestUnlockedLevel();
     LEVELS.forEach(lvl => {
-      const card = document.createElement('button');
-      card.type = 'button';
+      const card = document.createElement('div');
+      card.className = 'level-card' + (lvl.id === selectedLevelId ? ' selected' : '');
       const isCleared = clearedLevels.has(lvl.id);
-      const locked = lvl.id > currentId;
-      const isCurrent = !isCleared && lvl.id === currentId;
-      card.className = 'level-card' + (lvl.id === selectedLevelId ? ' selected' : '') + (locked ? ' locked' : '');
-      card.disabled = locked;
-      const status = isCleared ? '✓ COMPLETED' : locked ? '🔒 LOCKED' : '◆ CURRENT';
       card.innerHTML = `
         <div class="lvl-info">
           <div class="lvl-title">${lvl.icon || ''} Level ${lvl.id} — ${lvl.name}</div>
           <div class="lvl-meta">${lvl.desc}</div>
         </div>
-        <span class="lvl-badge ${isCleared ? 'cleared' : locked ? 'locked-badge' : 'current-badge'}">${status}</span>
+        <span class="lvl-badge ${isCleared ? 'cleared' : ''}">${isCleared ? '★ CLEARED' : (lvl.hasBoss ? '👑 BOSS' : 'READY')}</span>
       `;
-      if (!locked) card.addEventListener('click', () => {
+      card.addEventListener('click', () => {
         selectedLevelId = lvl.id;
         renderLevelCards();
       });
@@ -909,7 +895,7 @@
     stormTimer = 18; stormActive = 0; stormFx = 0;
     const th = currentLevel.theme;
     const vw = window.innerWidth, vh = window.innerHeight;
-    const make = (n, f) => { for (let i = 0; i < n; i++) weather.push(Object.assign({ x: rand(0, vw), y: rand(0, vh), rot: rand(0, 6.28) }, f())); };
+    const make = (n, f) => { const cnt = Math.max(0, Math.round(n * (window.__AR_WEATHER_SCALE ?? 1))); for (let i = 0; i < cnt; i++) weather.push(Object.assign({ x: rand(0, vw), y: rand(0, vh), rot: rand(0, 6.28) }, f())); };
     if (th === 'grass') make(16, () => ({ kind: 'leaf', c: '#86efac', vx: rand(15, 35), vy: rand(20, 45), r: rand(2.5, 4) }));
     if (th === 'autumn') make(46, () => ({ kind: 'leaf', c: ['#f97316', '#facc15', '#b45309'][Math.floor(rand(0, 3))], vx: rand(25, 60), vy: rand(30, 70), r: rand(3, 5) }));
     if (th === 'snow') make(110, () => ({ kind: 'snow', vx: rand(-15, 15), vy: rand(40, 95), r: rand(1.2, 3) }));
@@ -1049,10 +1035,6 @@
   }
 
   function startLevel(levelId) {
-    if (levelId > highestUnlockedLevel() && !clearedLevels.has(levelId)) {
-      lobbyToast('Pehle pichhla mission complete karo!');
-      return;
-    }
     audio.init();
     currentLevel = LEVELS.find(l => l.id === levelId) || LEVELS[0];
     selectedLevelId = currentLevel.id;
@@ -1105,6 +1087,10 @@
     ui.lobbyOverlay.classList.add('hidden');
     ui.pauseOverlay.classList.add('hidden');
     ui.endOverlay.classList.add('hidden');
+    ['screenMissions', 'screenArmory', 'screenOutfits', 'screenRewards', 'screenSettings', 'screenProfile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('hidden');
+    });
     ui.hud.classList.remove('hidden');
     ui.killFeed.innerHTML = '';
     ui.hudLevelTag.textContent = `LVL ${currentLevel.id}`;
@@ -1745,8 +1731,6 @@
 
   function updateParticlesAndEffects(dt) {
     updateWeather(dt);
-    const particleCap = graphicsQuality === 'low' ? 120 : graphicsQuality === 'high' ? 650 : 320;
-    if (particles.length > particleCap) particles.splice(0, particles.length - particleCap);
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
       p.x += p.vx * dt;
@@ -1790,7 +1774,6 @@
     state = 'ended';
     ui.touchControls.classList.add('hidden');
     ui.endOverlay.classList.remove('hidden');
-    ui.nextLevelBtn.disabled = !victory || currentLevel.id >= LEVELS.length;
 
     ui.endBadge.textContent = victory ? (currentLevel.id >= LEVELS.length ? '🏆 CAMPAIGN COMPLETE' : `LEVEL ${currentLevel.id} CLEARED`) : 'ELIMINATED';
     ui.endTitle.textContent = victory ? 'BOOYAH!' : 'DEFEATED';
@@ -1805,8 +1788,9 @@
     ui.statTime.textContent = `${mins}:${secs}`;
 
     const rewardEl = document.getElementById('endReward');
-    if (rewardEl) rewardEl.textContent = awardMatchRewards(victory, lastFirstClear);
+    if (rewardEl) rewardEl.innerHTML = awardMatchRewards(victory, lastFirstClear);
     lastFirstClear = false;
+    if (typeof renderResultHero === 'function') renderResultHero(victory);
 
     const hasNext = victory && currentLevel.id < LEVELS.length;
     ui.nextLevelBtn.classList.toggle('hidden', !hasNext);
@@ -2487,6 +2471,8 @@
       state = 'paused';
       mouse.down = false;
       touch.firing = false;
+      const pSub = document.getElementById('pauseLevelSub');
+      if (pSub && currentLevel) pSub.textContent = `${currentLevel.icon || ''} Level ${currentLevel.id} — ${currentLevel.name}`;
       ui.pauseOverlay.classList.remove('hidden');
       ui.touchControls.classList.add('hidden');
     } else if (state === 'paused') {
@@ -2499,11 +2485,6 @@
   ui.pauseBtn.addEventListener('click', togglePause);
   ui.resumeBtn.addEventListener('click', togglePause);
   ui.restartBtn.addEventListener('click', () => startLevel(currentLevel.id));
-  document.getElementById('pauseSettingsBtn').addEventListener('click', () => {
-    ui.pauseOverlay.classList.add('hidden');
-    ui.lobbyOverlay.classList.remove('hidden');
-    openLobbyTab('settings');
-  });
   ui.quitLobbyBtn.addEventListener('click', goToLobby);
   ui.endLobbyBtn.addEventListener('click', goToLobby);
   ui.playBtn.addEventListener('click', () => startLevel(selectedLevelId));
@@ -2512,7 +2493,10 @@
 
   ui.soundToggleBtn.addEventListener('click', () => {
     audio.muted = !audio.muted;
+    profile.sound = !audio.muted;
+    saveProfile();
     ui.soundToggleBtn.textContent = audio.muted ? '🔇' : '🔊';
+    if (typeof updateLobbyUI === 'function') updateLobbyUI();
   });
   ui.touchToggleBtn.addEventListener('click', () => {
     touchControlsEnabled = !touchControlsEnabled;
@@ -2534,56 +2518,96 @@
     ui.pauseOverlay.classList.add('hidden');
     ui.endOverlay.classList.add('hidden');
     ui.lobbyOverlay.classList.remove('hidden');
-    openLobbyTab('home');
+    if (typeof openScreen === 'function') openScreen('lobby');
     refreshLobby();
   }
 
   // =========================================================
-  // FF-STYLE LOBBY  (profile, currency, armory, outfits, rewards, 2D hero)
+  // ROYAL UPGRADED UI — ALL 9 INTERFACES & FULL FLOW
   // =========================================================
   const OUTFITS = [
-    { id: 'amber',   name: 'Amber',      color: '#f59e0b', gold: 0 },
-    { id: 'crimson', name: 'Crimson',    color: '#dc2626', gold: 200 },
-    { id: 'ocean',   name: 'Ocean',      color: '#0ea5e9', gold: 200 },
-    { id: 'emerald', name: 'Emerald',    color: '#10b981', gold: 250 },
-    { id: 'violet',  name: 'Violet',     color: '#8b5cf6', gold: 250 },
-    { id: 'frost',   name: 'Frost',      color: '#7dd3fc', gold: 350 },
-    { id: 'neon',    name: 'Neon Pink',  color: '#ec4899', gems: 25 },
-    { id: 'shadow',  name: 'Shadow',     color: '#475569', gems: 20 },
-    { id: 'royal',   name: 'Royal Gold', color: '#fbbf24', gems: 40 }
+    { id: 'amber',   name: 'Amber',      color: '#f59e0b', gold: 0,   desc: 'Signature Royal Gold & Black tactical suit' },
+    { id: 'crimson', name: 'Crimson',    color: '#dc2626', gold: 200, desc: 'Blood-red assault operative armor' },
+    { id: 'ocean',   name: 'Ocean',      color: '#0ea5e9', gold: 200, desc: 'Deep-sea cobalt stealth plating' },
+    { id: 'emerald', name: 'Emerald',    color: '#10b981', gold: 250, desc: 'Jungle recon emerald combat gear' },
+    { id: 'violet',  name: 'Violet',     color: '#8b5cf6', gold: 250, desc: 'Shadow-amethyst cyber battle suit' },
+    { id: 'frost',   name: 'Frost',      color: '#7dd3fc', gold: 350, desc: 'Arctic glacier reflective armor' },
+    { id: 'neon',    name: 'Neon Pink',  color: '#ec4899', gems: 25,  desc: 'Exclusive Neon Strike royal edition' },
+    { id: 'shadow',  name: 'Shadow',     color: '#475569', gems: 20,  desc: 'Obsidian night-ops phantom suit' },
+    { id: 'royal',   name: 'Royal Gold', color: '#fbbf24', gems: 40,  desc: 'Supreme Champion 24K Gold armor' }
   ];
+
   const ARMORY = [
-    { id: 'M4A1',  gold: 0,   note: 'Balanced assault rifle' },
-    { id: 'MP40',  gold: 300, note: 'Fast SMG, close range' },
-    { id: 'M1887', gold: 500, note: 'Shotgun, 5 pellets' },
-    { id: 'AWM',   gold: 900, note: 'Sniper, long range' },
-    { id: 'G18',   gold: 150, note: 'Sidearm / selectable loadout' }
+    { id: 'M4A1',  cat: 'rifle',   gold: 0,   note: 'Balanced assault rifle • All-range reliability' },
+    { id: 'MP40',  cat: 'smg',     gold: 300, note: 'High fire-rate SMG • Deadly close quarters' },
+    { id: 'M1887', cat: 'shotgun', gold: 500, note: '5-pellet heavy shotgun • Devastating burst' },
+    { id: 'AWM',   cat: 'sniper',  gold: 900, note: 'Piercing laser sniper • One-two shot lethal' },
+    { id: 'G18',   cat: 'sidearm', gold: 0,   note: 'Standard sidearm • Infinite reserve ammo (Slot 3)' }
+  ];
+
+  const AVATARS = ['👑', '🦁', '🐉', '🦅', '⚡', '🔥', '💀', '🎯'];
+
+  const DAILY_REWARDS = [
+    { day: 1, icon: '🪙', gold: 200, gems: 5,  label: '200 🪙 + 5 💎' },
+    { day: 2, icon: '💎', gold: 250, gems: 10, label: '250 🪙 + 10 💎' },
+    { day: 3, icon: '🪙', gold: 450, gems: 10, label: '450 🪙 + 10 💎' },
+    { day: 4, icon: '💎', gold: 600, gems: 15, label: '600 🪙 + 15 💎' },
+    { day: 5, icon: '🎁', gold: 1000, gems: 25, label: '1000 🪙 + 25 💎' }
   ];
 
   const PROFILE_KEY = 'ar_royal_profile';
   function defaultProfile() {
-    return { name: 'PLAYER', xp: 0, gold: 500, gems: 50, outfit: 'amber', weapon: 'M4A1',
-             ownedW: ['M4A1'], ownedO: ['amber'], lastDaily: '', kills: 0, wins: 0, matches: 0 };
+    return {
+      name: 'PLAYER',
+      avatar: '👑',
+      xp: 0,
+      gold: 500,
+      gems: 50,
+      outfit: 'amber',
+      weapon: 'M4A1',
+      ownedW: ['M4A1', 'G18'],
+      ownedO: ['amber'],
+      lastDaily: '',
+      dailyStreak: 0,
+      claimedMilestones: [],
+      kills: 0,
+      wins: 0,
+      matches: 0,
+      totalDamage: 0,
+      graphics: 'medium',
+      speed: 'tactical',
+      hud: 'compact',
+      sound: true
+    };
   }
+
   function loadProfile() {
     const base = defaultProfile();
     try {
       const raw = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
       if (raw && typeof raw === 'object') Object.assign(base, raw);
     } catch (e) {}
-    if (!WEAPONS[base.weapon]) base.weapon = 'M4A1';
+    if (!WEAPONS[base.weapon] || WEAPONS[base.weapon].slotType !== 'primary') base.weapon = 'M4A1';
     if (!OUTFITS.some(o => o.id === base.outfit)) base.outfit = 'amber';
-    if (!Array.isArray(base.ownedW)) base.ownedW = ['M4A1'];
+    if (!Array.isArray(base.ownedW)) base.ownedW = ['M4A1', 'G18'];
+    if (!base.ownedW.includes('G18')) base.ownedW.push('G18');
     if (!Array.isArray(base.ownedO)) base.ownedO = ['amber'];
-    if (!Number.isFinite(base.matches)) base.matches = 0;
-    if (!Number.isFinite(base.kills)) base.kills = 0;
-    if (!Number.isFinite(base.wins)) base.wins = 0;
+    if (!Array.isArray(base.claimedMilestones)) base.claimedMilestones = [];
     return base;
   }
+
   let profile = loadProfile();
   function saveProfile() {
     try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch (e) {}
   }
+
+  // Apply persisted settings on load
+  gameSpeedMode = profile.speed || 'tactical';
+  hudSizeMode = profile.hud || 'compact';
+  audio.muted = profile.sound === false;
+  window.__AR_DPR_CAP = profile.graphics === 'low' ? 1 : profile.graphics === 'high' ? 2 : 1.5;
+  window.__AR_WEATHER_SCALE = profile.graphics === 'low' ? 0.35 : profile.graphics === 'high' ? 1.0 : 0.75;
+
   const todayKey = () => new Date().toLocaleDateString('en-CA');
   const getOutfit = () => OUTFITS.find(o => o.id === profile.outfit) || OUTFITS[0];
 
@@ -2592,9 +2616,30 @@
     while (xp >= 100 + lv * 50) { xp -= 100 + lv * 50; lv++; }
     return { lv, cur: xp, need: 100 + lv * 50 };
   }
+
   function rankTitle(lv) {
-    return lv < 3 ? 'ROOKIE' : lv < 6 ? 'SOLDIER' : lv < 10 ? 'VETERAN' : lv < 15 ? 'ELITE' : 'LEGEND';
+    if (lv < 3) return 'BRONZE I';
+    if (lv < 5) return 'SILVER II';
+    if (lv < 8) return 'GOLD III';
+    if (lv < 12) return 'PLATINUM I';
+    if (lv < 16) return 'DIAMOND II';
+    return 'HEROIC KING';
   }
+
+  function getHighestUnlockedLevel() {
+    let maxCleared = 0;
+    clearedLevels.forEach(id => { if (id > maxCleared) maxCleared = id; });
+    return Math.min(LEVELS.length, maxCleared + 1);
+  }
+
+  function getLevelStatus(lvlId) {
+    if (clearedLevels.has(lvlId)) return 'completed';
+    if (lvlId <= getHighestUnlockedLevel()) return 'current';
+    return 'locked';
+  }
+
+  // Default selectedLevelId to current unlocked level
+  selectedLevelId = getHighestUnlockedLevel();
 
   const L = {
     canvas: document.getElementById('lobbyCanvas'),
@@ -2602,26 +2647,22 @@
     avatar: document.getElementById('ffAvatar'),
     lv: document.getElementById('ffLv'),
     xpFill: document.getElementById('ffXpFill'),
+    xpNum: document.getElementById('ffXpNum'),
     gold: document.getElementById('ffGold'),
     gems: document.getElementById('ffGems'),
     modeName: document.getElementById('modeName'),
     modeDesc: document.getElementById('modeDesc'),
+    modeShapeBadge: document.getElementById('modeShapeBadge'),
+    modeThemeIcon: document.getElementById('modeThemeIcon'),
     nameplate: document.getElementById('ffNameplate'),
     npTitle: document.getElementById('npTitle'),
     npName: document.getElementById('npName'),
     npGear: document.getElementById('npGear'),
-    panel: document.getElementById('lobbyPanel'),
-    panelTitle: document.getElementById('panelTitle'),
-    armoryList: document.getElementById('armoryList'),
-    outfitList: document.getElementById('outfitList'),
     claimBtn: document.getElementById('claimDailyBtn'),
+    lobbyQuickClaimBtn: document.getElementById('lobbyQuickClaimBtn'),
+    lobbyDailyStatus: document.getElementById('lobbyDailyStatus'),
     rewardDot: document.getElementById('rewardDot'),
     nameInput: document.getElementById('nameInput'),
-    profileAvatar: document.getElementById('profileAvatarLarge'),
-    profileName: document.getElementById('profileDisplayName'),
-    profileRank: document.getElementById('profileRankTitle'),
-    profileXpFill: document.getElementById('profileXpFill'),
-    profileXpText: document.getElementById('profileXpText'),
     toast: document.getElementById('lobbyToast'),
     soundBtn: document.getElementById('lobbySoundBtn')
   };
@@ -2629,170 +2670,497 @@
 
   let toastTimer = null;
   function lobbyToast(msg) {
+    if (!L.toast) return;
     L.toast.textContent = msg;
     L.toast.classList.remove('hidden');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => L.toast.classList.add('hidden'), 1900);
+    toastTimer = setTimeout(() => L.toast.classList.add('hidden'), 2100);
+  }
+
+  function syncSharedHeaderBindings() {
+    const info = levelInfo();
+    document.querySelectorAll('[data-bind="name"]').forEach(el => { el.textContent = profile.name; });
+    document.querySelectorAll('[data-bind="lv"]').forEach(el => { el.textContent = `Lv. ${info.lv}`; });
+    document.querySelectorAll('[data-bind="gold"]').forEach(el => { el.textContent = profile.gold.toLocaleString(); });
+    document.querySelectorAll('[data-bind="gems"]').forEach(el => { el.textContent = profile.gems.toLocaleString(); });
   }
 
   function updateModeCard() {
     const lvl = LEVELS.find(l => l.id === selectedLevelId) || LEVELS[0];
-    L.modeName.textContent = `${lvl.icon || ''} Level ${lvl.id} — ${lvl.name}`;
-    L.modeDesc.textContent = lvl.desc;
-    ui.playBtn.textContent = '▶ START';
+    if (L.modeName) L.modeName.textContent = `Level ${lvl.id} — ${lvl.name}`;
+    if (L.modeDesc) L.modeDesc.textContent = lvl.desc;
+    if (L.modeShapeBadge) L.modeShapeBadge.textContent = `${lvl.shapeIcon} ${lvl.shapeName.toUpperCase()}`;
+    if (L.modeThemeIcon) L.modeThemeIcon.textContent = lvl.icon || '🌴';
+    const promo = document.getElementById('promoClearedTxt');
+    if (promo) promo.textContent = `${clearedLevels.size} / ${LEVELS.length} Levels Cleared ▸`;
   }
 
   function updateLobbyUI() {
     const info = levelInfo();
-    L.name.textContent = profile.name;
-    L.avatar.textContent = profile.name.slice(0, 2).toUpperCase();
-    L.avatar.style.background = `linear-gradient(135deg, ${getOutfit().color}, #0f172a)`;
-    L.avatar.style.color = '#fff';
-    L.lv.textContent = `LV ${info.lv}`;
-    L.xpFill.style.width = `${Math.round((info.cur / info.need) * 100)}%`;
-    if (L.profileAvatar) {
-      L.profileAvatar.textContent = profile.name.slice(0,2).toUpperCase();
-      L.profileAvatar.style.background = `linear-gradient(135deg, ${getOutfit().color}, #0f172a)`;
-      L.profileName.textContent = profile.name;
-      L.profileRank.textContent = rankTitle(info.lv);
-      L.profileXpFill.style.width = `${Math.round((info.cur / info.need) * 100)}%`;
-      L.profileXpText.textContent = `${info.cur} / ${info.need} XP`;
-      document.getElementById('profileMatches').textContent = profile.matches || 0;
-      document.getElementById('profileKills').textContent = profile.kills || 0;
-      document.getElementById('profileWins').textContent = profile.wins || 0;
-      document.getElementById('profileWinRate').textContent = `${profile.matches ? Math.round(profile.wins / profile.matches * 100) : 0}%`;
+    const claimedToday = profile.lastDaily === todayKey();
+    if (L.name) L.name.textContent = profile.name;
+    if (L.avatar) {
+      L.avatar.textContent = profile.avatar || '👑';
+      L.avatar.style.background = `linear-gradient(135deg, ${getOutfit().color}, #0f172a)`;
     }
-    L.gold.textContent = profile.gold.toLocaleString();
-    L.gems.textContent = profile.gems.toLocaleString();
-    L.npTitle.textContent = rankTitle(info.lv);
-    L.npName.textContent = profile.name;
-    L.npGear.textContent = `${profile.weapon} • ${getOutfit().name.toUpperCase()}`;
-    L.rewardDot.classList.toggle('hidden', profile.lastDaily === todayKey());
-    L.claimBtn.disabled = profile.lastDaily === todayKey();
-    L.claimBtn.textContent = profile.lastDaily === todayKey() ? 'CLAIMED ✓' : 'CLAIM';
-    L.soundBtn.textContent = audio.muted ? '🔇' : '🔊';
-    ui.progressSummary.textContent = `${clearedLevels.size}/${LEVELS.length} Cleared`;
+    if (L.lv) L.lv.textContent = `Lv. ${info.lv}`;
+    if (L.xpFill) L.xpFill.style.width = `${Math.round((info.cur / info.need) * 100)}%`;
+    if (L.xpNum) L.xpNum.textContent = `${info.cur}/${info.need}`;
+    if (L.gold) L.gold.textContent = profile.gold.toLocaleString();
+    if (L.gems) L.gems.textContent = profile.gems.toLocaleString();
+    if (L.npTitle) L.npTitle.textContent = rankTitle(info.lv);
+    if (L.npName) L.npName.textContent = profile.name;
+    if (L.npGear) L.npGear.textContent = `${profile.weapon} • ${getOutfit().name.toUpperCase()}`;
+    if (L.rewardDot) L.rewardDot.classList.toggle('hidden', claimedToday);
+    if (L.lobbyQuickClaimBtn) {
+      L.lobbyQuickClaimBtn.disabled = claimedToday;
+      L.lobbyQuickClaimBtn.textContent = claimedToday ? 'CLAIMED ✓' : 'CLAIM';
+    }
+    if (L.lobbyDailyStatus) {
+      L.lobbyDailyStatus.textContent = claimedToday ? 'Claimed Today ✓' : `Day ${(profile.dailyStreak % 5) + 1} Ready!`;
+    }
+    if (L.soundBtn) L.soundBtn.textContent = audio.muted ? '🔇' : '🔊';
+    if (ui.soundToggleBtn) ui.soundToggleBtn.textContent = audio.muted ? '🔇' : '🔊';
+    if (ui.progressSummary) ui.progressSummary.textContent = `${clearedLevels.size}/${LEVELS.length} Cleared`;
+    syncSharedHeaderBindings();
     updateModeCard();
   }
 
-  function renderArmory() {
-    L.armoryList.innerHTML = '';
-    ARMORY.forEach(item => {
+  // ---------- SCREEN ROUTER (ALL 9 INTERFACES) ----------
+  let activeScreen = 'lobby';
+  let settingsReturnTo = 'lobby';
+
+  function openScreen(name) {
+    activeScreen = name;
+    const screens = ['screenMissions', 'screenArmory', 'screenOutfits', 'screenRewards', 'screenSettings', 'screenProfile'];
+    screens.forEach(id => document.getElementById(id)?.classList.add('hidden'));
+
+    document.querySelectorAll('.ff-nav').forEach(b => {
+      b.classList.toggle('active', b.dataset.screen === name);
+    });
+
+    syncSharedHeaderBindings();
+
+    if (name === 'lobby') {
+      updateLobbyUI();
+      return;
+    }
+    if (name === 'missions') {
+      renderMissionsScreen();
+      document.getElementById('screenMissions').classList.remove('hidden');
+    } else if (name === 'armory') {
+      renderArmoryScreen();
+      document.getElementById('screenArmory').classList.remove('hidden');
+    } else if (name === 'outfits') {
+      renderOutfitsScreen();
+      document.getElementById('screenOutfits').classList.remove('hidden');
+    } else if (name === 'rewards') {
+      renderRewardsScreen();
+      document.getElementById('screenRewards').classList.remove('hidden');
+    } else if (name === 'settings') {
+      renderSettingsScreen();
+      document.getElementById('screenSettings').classList.remove('hidden');
+    } else if (name === 'profile') {
+      renderProfileScreen();
+      document.getElementById('screenProfile').classList.remove('hidden');
+    }
+  }
+
+  // ---------- 2. MISSIONS SCREEN (20 LEVELS) ----------
+  let missionFilter = 'all';
+  function renderMissionsScreen() {
+    const container = document.getElementById('missionListContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const filtered = LEVELS.filter(lvl => {
+      const st = getLevelStatus(lvl.id);
+      if (missionFilter === 'current') return st === 'current';
+      if (missionFilter === 'completed') return st === 'completed';
+      if (missionFilter === 'boss') return lvl.hasBoss;
+      return true;
+    });
+
+    filtered.forEach(lvl => {
+      const st = getLevelStatus(lvl.id);
+      const isSelected = lvl.id === selectedLevelId;
+      const row = document.createElement('div');
+      row.className = `mission-row-card ${st}${isSelected ? ' selected' : ''}`;
+
+      const stars = st === 'completed' ? '⭐⭐⭐' : st === 'current' ? '⭐⭐☆' : '☆☆☆';
+      const badgeLabel = st === 'completed' ? '★ COMPLETED' : st === 'current' ? '▶ CURRENT' : '🔒 LOCKED';
+      const actionBtnHtml = st === 'locked'
+        ? `<button class="btn-royal-dark btn-xs" type="button" disabled>🔒 Locked</button>`
+        : `<button class="btn-royal-gold btn-xs mission-play-inline" type="button">${isSelected ? '▶ PLAY' : 'SELECT'}</button>`;
+
+      row.innerHTML = `
+        <div class="mr-left">
+          <div class="mr-thumb" style="background:${lvl.colors.bg}">${lvl.icon || '🗺'}</div>
+          <div class="mr-info">
+            <div class="mr-title">Level ${lvl.id} — ${lvl.name}</div>
+            <div class="mr-desc">${lvl.desc}</div>
+          </div>
+        </div>
+        <div class="mr-right">
+          <span class="mr-stars">${stars}</span>
+          <span class="status-tag ${st}">${badgeLabel}</span>
+          ${actionBtnHtml}
+        </div>
+      `;
+
+      row.addEventListener('click', (e) => {
+        if (st === 'locked') {
+          lobbyToast(`🔒 Level ${lvl.id} locked! Pehle Level ${getHighestUnlockedLevel()} clear karein.`);
+          return;
+        }
+        const clickedPlay = e.target.closest('.mission-play-inline') && isSelected;
+        selectedLevelId = lvl.id;
+        updateModeCard();
+        renderMissionsScreen();
+        if (clickedPlay) {
+          openScreen('lobby');
+          startLevel(selectedLevelId);
+        } else {
+          lobbyToast(`🎯 Level ${lvl.id} — ${lvl.name} selected!`);
+        }
+      });
+
+      container.appendChild(row);
+    });
+
+    const curLvl = LEVELS.find(l => l.id === selectedLevelId) || LEVELS[0];
+    const fTitle = document.getElementById('selectedMissionFooterTitle');
+    const fMeta = document.getElementById('selectedMissionFooterMeta');
+    if (fTitle) fTitle.textContent = `Selected: ${curLvl.icon} Level ${curLvl.id} — ${curLvl.name}`;
+    if (fMeta) fMeta.textContent = `Completed: ${clearedLevels.size}/20 • ${curLvl.intro}`;
+  }
+
+  // ---------- 3. ARMORY SCREEN (WEAPON PREVIEW, STATS, BUY, EQUIP, SOUND) ----------
+  let armoryCategory = 'all';
+  let previewGunId = profile.weapon || 'M4A1';
+
+  function drawWeaponShowcaseCanvas(wid) {
+    const cvs = document.getElementById('weaponPreviewCanvas');
+    if (!cvs) return;
+    const c = cvs.getContext('2d');
+    const w = cvs.width, h = cvs.height;
+    const def = WEAPONS[wid] || WEAPONS.M4A1;
+    c.clearRect(0, 0, w, h);
+
+    // Subtle tactical grid
+    c.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+    c.lineWidth = 1;
+    for (let x = 0; x < w; x += 28) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke(); }
+    for (let y = 0; y < h; y += 28) { c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke(); }
+
+    // Radial glow behind gun
+    const grd = c.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, 160);
+    grd.addColorStop(0, def.color + '44');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = grd;
+    c.fillRect(0, 0, w, h);
+
+    c.save();
+    c.translate(w * 0.5, h * 0.52);
+    c.rotate(-0.08);
+    const len = 130 + def.barrelLen * 4.5;
+    const bodyH = 22 + def.bodyW * 2;
+
+    // Stock
+    if (wid !== 'G18') {
+      c.fillStyle = '#1e293b';
+      c.beginPath();
+      c.roundRect(-len * 0.55 - 48, -bodyH * 0.4, 58, bodyH * 1.35, 8);
+      c.fill();
+    }
+
+    // Receiver body
+    c.fillStyle = '#0f172a';
+    c.beginPath();
+    c.roundRect(-len * 0.5, -bodyH * 0.5, len * 0.95, bodyH, 7);
+    c.fill();
+    c.strokeStyle = def.color;
+    c.lineWidth = 2.5;
+    c.stroke();
+
+    // Accent strip
+    c.fillStyle = def.color;
+    c.fillRect(-len * 0.25, -bodyH * 0.25, len * 0.48, bodyH * 0.45);
+
+    // Barrel & Muzzle
+    c.fillStyle = '#475569';
+    c.fillRect(len * 0.42, -bodyH * 0.22, len * 0.34, bodyH * 0.44);
+    c.fillStyle = def.color;
+    c.fillRect(len * 0.72, -bodyH * 0.28, 12, bodyH * 0.56);
+
+    // Magazine
+    if (wid !== 'M1887') {
+      c.fillStyle = '#111827';
+      c.beginPath();
+      c.roundRect(-12, bodyH * 0.45, 22, 46, 5);
+      c.fill();
+      c.strokeStyle = def.color;
+      c.lineWidth = 1.5;
+      c.stroke();
+    }
+
+    // Sniper Scope
+    if (wid === 'AWM') {
+      c.fillStyle = '#0b1120';
+      c.fillRect(-35, -bodyH * 0.5 - 22, 95, 16);
+      c.strokeStyle = '#38bdf8';
+      c.strokeRect(-35, -bodyH * 0.5 - 22, 95, 16);
+    }
+    c.restore();
+  }
+
+  function renderArmoryScreen() {
+    const list = document.getElementById('armoryCardsList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    const items = ARMORY.filter(item => armoryCategory === 'all' || item.cat === armoryCategory);
+    if (!items.some(i => i.id === previewGunId) && items.length) previewGunId = items[0].id;
+
+    items.forEach(item => {
       const w = WEAPONS[item.id];
       const owned = profile.ownedW.includes(item.id);
-      const equipped = profile.weapon === item.id;
-      const row = document.createElement('div');
-      row.className = 'shop-item' + (equipped ? ' equipped' : '');
-      row.innerHTML = `
-        <div>
-          <div class="shop-name">${w.name}</div>
-          <div class="shop-meta">DMG ${w.damage} • MAG ${w.magSize} • ${item.note}</div>
-        </div>`;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'shop-btn' + (equipped ? ' on' : owned ? ' owned' : '');
-      btn.textContent = equipped ? 'EQUIPPED' : owned ? 'EQUIP' : `🪙 ${item.gold}`;
-      btn.addEventListener('click', () => {
-        if (equipped) return;
-        if (!owned) {
-          if (profile.gold < item.gold) { lobbyToast('Gold kam hai! Match khelo aur kamao 🪙'); return; }
-          profile.gold -= item.gold;
-          profile.ownedW.push(item.id);
-          lobbyToast(`${w.name} unlock ho gayi!`);
-        }
-        profile.weapon = item.id;
-        saveProfile();
-        updateLobbyUI();
-        renderArmory();
+      const equipped = profile.weapon === item.id || item.id === 'G18';
+      const selected = previewGunId === item.id;
+
+      const card = document.createElement('div');
+      card.className = `armory-gun-card${selected ? ' selected' : ''}`;
+      card.innerHTML = `
+        <div class="agc-top">
+          <strong>${w.name}</strong>
+          <span class="agc-badge ${equipped ? 'eq' : ''}">${item.id === 'G18' ? 'SIDEARM' : equipped ? 'EQUIPPED' : owned ? 'OWNED' : `🪙 ${item.gold}`}</span>
+        </div>
+        <div class="agc-meta">DMG: ${w.damage}${w.pellets > 1 ? '×' + w.pellets : ''} • MAG: ${w.magSize}</div>
+      `;
+      card.addEventListener('click', () => {
+        previewGunId = item.id;
+        renderArmoryScreen();
       });
-      const snd = document.createElement('button');
-      snd.type = 'button';
-      snd.className = 'shop-btn owned';
-      snd.style.minWidth = '34px';
-      snd.textContent = '🔊';
-      snd.title = 'Gun sound sun lo';
-      snd.addEventListener('click', () => { audio.init(); audio.playGun(w.sound, 1); });
-      const acts = document.createElement('div');
-      acts.className = 'shop-actions';
-      acts.appendChild(snd);
-      acts.appendChild(btn);
-      row.appendChild(acts);
-      L.armoryList.appendChild(row);
+      list.appendChild(card);
     });
+
+    // Update right showcase
+    const item = ARMORY.find(a => a.id === previewGunId) || ARMORY[0];
+    const w = WEAPONS[item.id];
+    const owned = profile.ownedW.includes(item.id);
+    const equipped = profile.weapon === item.id;
+
+    document.getElementById('armoryGunName').textContent = w.name;
+    document.getElementById('armoryGunSub').textContent = item.note;
+    document.getElementById('armoryGunBadge').textContent = item.id === 'G18' ? 'DEFAULT SIDEARM' : equipped ? 'EQUIPPED ✓' : owned ? 'UNLOCKED' : `PRICE: 🪙 ${item.gold}`;
+
+    const totalDmg = w.damage * (w.pellets || 1);
+    document.getElementById('wStatDmgBar').style.width = `${Math.min(100, (totalDmg / 95) * 100)}%`;
+    document.getElementById('wStatDmgVal').textContent = w.pellets > 1 ? `${w.damage}×${w.pellets}` : `${w.damage}`;
+
+    document.getElementById('wStatRngBar').style.width = `${Math.min(100, (w.range / 1000) * 100)}%`;
+    document.getElementById('wStatRngVal').textContent = `${w.range}`;
+
+    const rps = (1 / w.fireRate).toFixed(1);
+    document.getElementById('wStatSpdBar').style.width = `${Math.min(100, ((1 / w.fireRate) / 14) * 100)}%`;
+    document.getElementById('wStatSpdVal').textContent = `${rps}/s`;
+
+    document.getElementById('wStatMagBar').style.width = `${Math.min(100, (w.magSize / 35) * 100)}%`;
+    document.getElementById('wStatMagVal').textContent = `${w.magSize}`;
+
+    const buyBtn = document.getElementById('armoryBuyBtn');
+    const eqBtn = document.getElementById('armoryEquipBtn');
+    if (item.id === 'G18') {
+      buyBtn.classList.add('hidden');
+      eqBtn.disabled = true;
+      eqBtn.textContent = 'Slot 3 Active ✓';
+    } else if (!owned) {
+      buyBtn.classList.remove('hidden');
+      buyBtn.textContent = `Buy 🪙 ${item.gold}`;
+      eqBtn.disabled = true;
+      eqBtn.textContent = 'Locked';
+    } else {
+      buyBtn.classList.add('hidden');
+      eqBtn.disabled = equipped;
+      eqBtn.textContent = equipped ? 'Equipped ✓' : 'Equip Primary';
+    }
+
+    drawWeaponShowcaseCanvas(item.id);
   }
 
-  function renderOutfits() {
-    L.outfitList.innerHTML = '';
-    OUTFITS.forEach(o => {
+  // ---------- 4. OUTFITS SCREEN (CHARACTER PREVIEW, BUY & EQUIP) ----------
+  let outfitFilter = 'all';
+  let previewOutfitId = profile.outfit || 'amber';
+
+  function drawOutfitPreviewCanvas(outfitId) {
+    const cvs = document.getElementById('outfitPreviewCanvas');
+    if (!cvs) return;
+    const c = cvs.getContext('2d');
+    const out = OUTFITS.find(o => o.id === outfitId) || OUTFITS[0];
+    c.clearRect(0, 0, cvs.width, cvs.height);
+
+    // Pedestal ring
+    c.strokeStyle = out.color;
+    c.lineWidth = 2.5;
+    c.beginPath();
+    c.ellipse(cvs.width / 2, cvs.height - 22, 65, 14, 0, 0, Math.PI * 2);
+    c.stroke();
+
+    c.save();
+    c.translate(cvs.width / 2, cvs.height - 24);
+    c.scale(0.84, 0.84);
+    drawLobbyHero(c, performance.now() / 1000, out.color, profile.weapon, 0, 0);
+    c.restore();
+  }
+
+  function renderOutfitsScreen() {
+    const grid = document.getElementById('outfitCardsGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const list = OUTFITS.filter(o => {
+      const owned = profile.ownedO.includes(o.id);
+      if (outfitFilter === 'owned') return owned;
+      if (outfitFilter === 'gold') return !o.gems;
+      if (outfitFilter === 'gems') return !!o.gems;
+      return true;
+    });
+
+    if (!list.some(o => o.id === previewOutfitId) && list.length) previewOutfitId = list[0].id;
+
+    list.forEach(o => {
       const owned = profile.ownedO.includes(o.id);
       const equipped = profile.outfit === o.id;
-      const cell = document.createElement('div');
-      cell.className = 'outfit-item' + (equipped ? ' equipped' : '');
-      const price = owned ? (equipped ? 'ON ✓' : 'OWNED') : (o.gems ? `💎 ${o.gems}` : `🪙 ${o.gold}`);
-      cell.innerHTML = `
-        <div class="outfit-dot" style="background:${o.color}"></div>
-        <div class="outfit-name">${o.name}</div>
-        <div class="outfit-price">${price}</div>`;
-      cell.addEventListener('click', () => {
-        if (!owned) {
-          if (o.gems) {
-            if (profile.gems < o.gems) { lobbyToast('Diamonds kam hain 💎'); return; }
-            profile.gems -= o.gems;
-          } else {
-            if (profile.gold < o.gold) { lobbyToast('Gold kam hai 🪙'); return; }
-            profile.gold -= o.gold;
-          }
-          profile.ownedO.push(o.id);
-          lobbyToast(`${o.name} outfit unlock!`);
-        }
-        profile.outfit = o.id;
-        saveProfile();
-        updateLobbyUI();
-        renderOutfits();
+      const selected = previewOutfitId === o.id;
+
+      const card = document.createElement('div');
+      card.className = `outfit-card${selected ? ' selected' : ''}${equipped ? ' equipped' : ''}`;
+      const statusTxt = equipped ? 'EQUIPPED ✓' : owned ? 'OWNED' : (o.gems ? `💎 ${o.gems}` : `🪙 ${o.gold}`);
+      card.innerHTML = `
+        <div class="oc-swatch" style="background:linear-gradient(135deg, ${o.color}, #0f172a)">👕</div>
+        <div class="oc-name">${o.name}</div>
+        <div class="oc-status">${statusTxt}</div>
+      `;
+      card.addEventListener('click', () => {
+        previewOutfitId = o.id;
+        renderOutfitsScreen();
       });
-      L.outfitList.appendChild(cell);
+      grid.appendChild(card);
     });
+
+    const cur = OUTFITS.find(o => o.id === previewOutfitId) || OUTFITS[0];
+    const owned = profile.ownedO.includes(cur.id);
+    const equipped = profile.outfit === cur.id;
+
+    document.getElementById('outfitPreviewName').textContent = cur.name;
+    document.getElementById('outfitPreviewDesc').textContent = cur.desc;
+
+    const buyBtn = document.getElementById('outfitBuyBtn');
+    const eqBtn = document.getElementById('outfitEquipBtn');
+    if (!owned) {
+      buyBtn.classList.remove('hidden');
+      buyBtn.textContent = cur.gems ? `Buy 💎 ${cur.gems}` : `Buy 🪙 ${cur.gold}`;
+      eqBtn.disabled = true;
+      eqBtn.textContent = 'Locked';
+    } else {
+      buyBtn.classList.add('hidden');
+      eqBtn.disabled = equipped;
+      eqBtn.textContent = equipped ? 'Equipped ✓' : 'Equip Outfit';
+    }
+
+    drawOutfitPreviewCanvas(cur.id);
   }
 
-  const PANEL_TITLES = { profile: 'PLAYER PROFILE', missions: 'MISSION', armory: 'ARMORY', outfit: 'OUTFIT', rewards: 'REWARDS', settings: 'SETTINGS' };
-  let lobbyTab = 'home';
-  function openLobbyTab(tab) {
-    lobbyTab = tab;
-    document.querySelectorAll('.ff-nav').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    if (tab === 'home') { L.panel.classList.add('hidden'); return; }
-    L.panel.classList.remove('hidden');
-    L.panelTitle.textContent = PANEL_TITLES[tab];
-    document.querySelectorAll('[data-panel]').forEach(s => s.classList.toggle('hidden', s.dataset.panel !== tab));
-    if (tab === 'profile') updateLobbyUI();
-    if (tab === 'missions') renderLevelCards();
-    if (tab === 'armory') renderArmory();
-    if (tab === 'outfit') renderOutfits();
-    if (tab === 'settings') {
-      L.nameInput.value = profile.name;
-      const returnBtn = document.getElementById('returnMatchBtn');
-      returnBtn.classList.toggle('hidden', state !== 'paused');
-      syncSettingsUI();
-      document.querySelectorAll('[data-graphics]').forEach(b => b.classList.toggle('active', b.dataset.graphics === graphicsQuality));
-      const sb = document.getElementById('settingsSoundBtn');
-      sb.textContent = audio.muted ? 'OFF' : 'ON'; sb.classList.toggle('active', !audio.muted); sb.setAttribute('aria-pressed', String(!audio.muted));
-      const vb = document.getElementById('vibrationBtn');
-      vb.textContent = vibrationEnabled ? 'ON' : 'OFF'; vb.classList.toggle('active', vibrationEnabled); vb.setAttribute('aria-pressed', String(vibrationEnabled));
+  // ---------- 5. REWARDS SCREEN (DAILY CLAIM + MATCH + MILESTONES) ----------
+  function renderRewardsScreen() {
+    const grid = document.getElementById('dailyDaysGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const claimedToday = profile.lastDaily === todayKey();
+    const activeDayIdx = profile.dailyStreak % DAILY_REWARDS.length;
+
+    document.getElementById('rewardStreakBadge').textContent = `Streak: ${profile.dailyStreak} Days`;
+
+    DAILY_REWARDS.forEach((d, idx) => {
+      const isPastClaimed = idx < activeDayIdx || (idx === activeDayIdx && claimedToday);
+      const isToday = idx === activeDayIdx && !claimedToday;
+      const card = document.createElement('div');
+      card.className = `day-card${isToday ? ' today' : ''}${isPastClaimed ? ' claimed' : ''}`;
+      card.innerHTML = `
+        <span class="day-lbl">Day ${d.day}</span>
+        <span class="day-ico">${isPastClaimed ? '✅' : d.icon}</span>
+        <span class="day-val">${d.label}</span>
+        <span class="day-st">${isPastClaimed ? 'CLAIMED' : isToday ? 'READY' : 'LOCKED'}</span>
+      `;
+      grid.appendChild(card);
+    });
+
+    if (L.claimBtn) {
+      L.claimBtn.disabled = claimedToday;
+      L.claimBtn.textContent = claimedToday ? 'ALREADY CLAIMED TODAY ✓' : `CLAIM DAY ${activeDayIdx + 1} (${DAILY_REWARDS[activeDayIdx].label})`;
     }
-    updateLobbyUI();
+
+    // Career Milestones
+    const msList = document.getElementById('milestonesList');
+    if (msList) {
+      msList.innerHTML = '';
+      const milestones = [
+        { id: 'k10',  title: 'First Blood Hunter (10 Total Kills)', ok: profile.kills >= 10, reward: '+250 🪙', gold: 250, gems: 0 },
+        { id: 'w3',   title: 'Triple Crown (3 BOOYAH Wins)', ok: profile.wins >= 3, reward: '+15 💎', gold: 0, gems: 15 },
+        { id: 'c5',   title: 'Explorer (5 Maps Cleared)', ok: clearedLevels.size >= 5, reward: '+500 🪙 & +10 💎', gold: 500, gems: 10 },
+        { id: 'c20',  title: 'AR ROYAL Champion (All 20 Maps Cleared)', ok: clearedLevels.size >= 20, reward: '+2000 🪙 & +50 💎', gold: 2000, gems: 50 }
+      ];
+      milestones.forEach(m => {
+        const done = profile.claimedMilestones.includes(m.id);
+        const row = document.createElement('div');
+        row.className = 'ms-row';
+        row.innerHTML = `<span>${m.title} — <b>${m.reward}</b></span>`;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = done ? 'btn-royal-dark btn-xs' : m.ok ? 'btn-royal-gold btn-xs' : 'btn-royal-dark btn-xs';
+        b.disabled = done || !m.ok;
+        b.textContent = done ? 'CLAIMED ✓' : m.ok ? 'CLAIM' : 'IN PROGRESS';
+        b.addEventListener('click', () => {
+          if (done || !m.ok) return;
+          profile.claimedMilestones.push(m.id);
+          profile.gold += m.gold;
+          profile.gems += m.gems;
+          saveProfile();
+          audio.init();
+          audio.playKill();
+          updateLobbyUI();
+          renderRewardsScreen();
+          lobbyToast(`🏆 Milestone Claimed: ${m.reward}`);
+        });
+        row.appendChild(b);
+        msList.appendChild(row);
+      });
+    }
   }
 
   function claimDaily() {
-    if (profile.lastDaily === todayKey()) { lobbyToast('Aaj ka reward le liya ✓'); return; }
+    if (profile.lastDaily === todayKey()) {
+      lobbyToast('आज का Daily Reward पहले ही Claim हो चुका है ✓');
+      return;
+    }
+    const idx = profile.dailyStreak % DAILY_REWARDS.length;
+    const r = DAILY_REWARDS[idx];
     profile.lastDaily = todayKey();
-    profile.gold += 200;
-    profile.gems += 5;
+    profile.dailyStreak += 1;
+    profile.gold += r.gold;
+    profile.gems += r.gems;
     saveProfile();
+    audio.init();
+    audio.playKill();
     updateLobbyUI();
-    lobbyToast('Daily reward: +200 🪙  +5 💎');
+    renderRewardsScreen();
+    lobbyToast(`🎁 Day ${r.day} Claimed: ${r.label}`);
   }
 
   function awardMatchRewards(victory, firstClear) {
     const kills = player ? player.kills : 0;
+    const dmg = player ? player.damageDealt : 0;
     const xp = 20 + kills * 10 + (victory ? 50 : 0);
     const gold = kills * 15 + (victory ? 100 : 20);
     const gems = victory && firstClear ? 5 : 0;
@@ -2802,79 +3170,384 @@
     profile.gems += gems;
     profile.kills += kills;
     profile.matches = (profile.matches || 0) + 1;
-    if (victory) profile.wins += 1;
+    profile.totalDamage = (profile.totalDamage || 0) + dmg;
+    if (victory) {
+      profile.wins += 1;
+      selectedLevelId = getHighestUnlockedLevel();
+    }
     saveProfile();
     const after = levelInfo().lv;
-    let txt = `+${gold} 🪙   +${xp} XP` + (gems ? `   +${gems} 💎` : '');
-    if (after > before) txt += `   ⬆ LEVEL ${after}!`;
-    return txt;
+    let html = `<div>🪙 +${gold} Gold</div><div>⚡ +${xp} XP</div>`;
+    if (gems) html += `<div>💎 +${gems} First Clear Gems</div>`;
+    if (after > before) html += `<div style="color:#4ade80">⬆ LEVEL UP: Lv. ${after}!</div>`;
+    return html;
+  }
+
+  // ---------- 6. SETTINGS SCREEN ----------
+  function renderSettingsScreen() {
+    if (L.nameInput) L.nameInput.value = profile.name;
+    syncSettingsUI();
+    document.querySelectorAll('[data-sound]').forEach(b => {
+      b.classList.toggle('active', (b.dataset.sound === 'on') === !audio.muted);
+    });
+    document.querySelectorAll('[data-gfx]').forEach(b => {
+      b.classList.toggle('active', b.dataset.gfx === (profile.graphics || 'medium'));
+    });
+    document.querySelectorAll('[data-touch]').forEach(b => {
+      b.classList.toggle('active', (b.dataset.touch === 'auto') === touchControlsEnabled);
+    });
+  }
+
+  // ---------- 7. PROFILE SCREEN ----------
+  function renderProfileScreen() {
+    const info = levelInfo();
+    const matches = Math.max(profile.matches || 0, profile.wins || 0);
+    const winRate = matches > 0 ? Math.round((profile.wins / matches) * 100) : 0;
+
+    document.getElementById('profAvatarLg').textContent = profile.avatar || '👑';
+    document.getElementById('profAvatarLg').style.background = `linear-gradient(135deg, ${getOutfit().color}, #0f172a)`;
+    document.getElementById('profName').textContent = profile.name;
+    document.getElementById('profLvTitle').textContent = `Lv. ${info.lv} • ${rankTitle(info.lv)}`;
+    document.getElementById('profXpFill').style.width = `${Math.round((info.cur / info.need) * 100)}%`;
+    document.getElementById('profXpText').textContent = `${info.cur} / ${info.need} XP`;
+
+    document.getElementById('profMatches').textContent = `${matches}`;
+    document.getElementById('profKills').textContent = `${profile.kills}`;
+    document.getElementById('profWinRate').textContent = `${winRate}%`;
+    document.getElementById('profRankTier').textContent = rankTitle(info.lv);
+    document.getElementById('profClearedLevels').textContent = `${clearedLevels.size} / ${LEVELS.length} Maps Cleared`;
+    document.getElementById('profWeapon').textContent = profile.weapon;
+    document.getElementById('profOutfit').textContent = getOutfit().name;
+
+    const picker = document.getElementById('avatarPickerRow');
+    if (picker) {
+      picker.innerHTML = '';
+      AVATARS.forEach(av => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `av-opt${profile.avatar === av ? ' active' : ''}`;
+        b.textContent = av;
+        b.addEventListener('click', () => {
+          profile.avatar = av;
+          saveProfile();
+          updateLobbyUI();
+          renderProfileScreen();
+          lobbyToast('Avatar updated ✓');
+        });
+        picker.appendChild(b);
+      });
+    }
+  }
+
+  // ---------- 9. RESULT HERO RENDERER ----------
+  function renderResultHero(victory) {
+    const cvs = document.getElementById('resultHeroCanvas');
+    if (!cvs) return;
+    const c = cvs.getContext('2d');
+    c.clearRect(0, 0, cvs.width, cvs.height);
+    c.save();
+    c.translate(cvs.width / 2, cvs.height - 14);
+    c.scale(0.62, 0.62);
+    drawLobbyHero(c, performance.now() / 1000, getOutfit().color, profile.weapon, victory ? 0.6 : 0, 0);
+    c.restore();
   }
 
   function refreshLobby() {
     updateLobbyUI();
     renderLevelCards();
-    if (lobbyTab === 'armory') renderArmory();
-    if (lobbyTab === 'outfit') renderOutfits();
+    if (activeScreen === 'missions') renderMissionsScreen();
+    if (activeScreen === 'armory') renderArmoryScreen();
+    if (activeScreen === 'outfits') renderOutfitsScreen();
+    if (activeScreen === 'rewards') renderRewardsScreen();
+    if (activeScreen === 'profile') renderProfileScreen();
   }
 
-  // ----- Lobby bindings -----
+  // ---------- ALL BUTTON & NAVIGATION BINDINGS ----------
+  // Left Sidebar Navigation
   document.querySelectorAll('.ff-nav').forEach(btn => {
     btn.addEventListener('click', () => {
       audio.init();
-      openLobbyTab(btn.dataset.tab === lobbyTab && lobbyTab !== 'home' ? 'home' : btn.dataset.tab);
+      openScreen(btn.dataset.screen);
     });
   });
-  document.getElementById('panelClose').addEventListener('click', () => openLobbyTab('home'));
-  document.getElementById('changeMissionBtn').addEventListener('click', () => openLobbyTab('missions'));
-  document.getElementById('profileBtn').addEventListener('click', () => openLobbyTab('profile'));
-  L.claimBtn.addEventListener('click', claimDaily);
-  document.getElementById('selectMissionBtn').addEventListener('click', () => {
-    updateModeCard(); openLobbyTab('home'); lobbyToast(`Level ${selectedLevelId} selected`);
+
+  // Back buttons on all sub-screens
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener('click', () => openScreen(btn.dataset.back));
   });
-  document.getElementById('settingsSoundBtn').addEventListener('click', () => {
-    audio.muted = !audio.muted;
-    document.getElementById('settingsSoundBtn').textContent = audio.muted ? 'OFF' : 'ON';
-    document.getElementById('settingsSoundBtn').classList.toggle('active', !audio.muted);
-    ui.soundToggleBtn.textContent = audio.muted ? '🔇' : '🔊';
-    L.soundBtn.textContent = audio.muted ? '🔇' : '🔊';
+
+  // Lobby direct shortcuts
+  document.getElementById('profileBtn')?.addEventListener('click', () => openScreen('profile'));
+  document.getElementById('stripProfileBtn')?.addEventListener('click', () => openScreen('profile'));
+  document.getElementById('stripArmoryBtn')?.addEventListener('click', () => openScreen('armory'));
+  document.getElementById('stripDailyBtn')?.addEventListener('click', () => openScreen('rewards'));
+  document.getElementById('campaignBannerBtn')?.addEventListener('click', () => openScreen('missions'));
+  document.getElementById('changeMissionBtn')?.addEventListener('click', () => openScreen('missions'));
+  document.getElementById('modeMapArt')?.addEventListener('click', () => openScreen('missions'));
+  document.getElementById('lobbyTopSettingsBtn')?.addEventListener('click', () => {
+    settingsReturnTo = 'lobby';
+    openScreen('settings');
   });
-  document.getElementById('vibrationBtn').addEventListener('click', () => {
-    vibrationEnabled = !vibrationEnabled;
-    localStorage.setItem('ar_royal_vibration', String(vibrationEnabled));
-    const b = document.getElementById('vibrationBtn'); b.textContent = vibrationEnabled ? 'ON' : 'OFF'; b.classList.toggle('active', vibrationEnabled); b.setAttribute('aria-pressed', String(vibrationEnabled));
+  document.getElementById('goldChipBtn')?.addEventListener('click', () => openScreen('rewards'));
+  document.getElementById('gemChipBtn')?.addEventListener('click', () => openScreen('rewards'));
+  L.lobbyQuickClaimBtn?.addEventListener('click', claimDaily);
+  L.claimBtn?.addEventListener('click', claimDaily);
+
+  // Mode tabs (Solo / Locked Duo & Squad feedback)
+  document.querySelectorAll('.mode-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.dataset.mode === 'solo') {
+        lobbyToast('SOLO Campaign Mode Active');
+      } else {
+        lobbyToast(`🔒 ${tab.dataset.mode.toUpperCase()} unlocks at Lv. 20!`);
+      }
+    });
   });
-  document.querySelectorAll('[data-graphics]').forEach(b => b.addEventListener('click', () => {
-    graphicsQuality = b.dataset.graphics; localStorage.setItem('ar_royal_graphics', graphicsQuality);
-    document.querySelectorAll('[data-graphics]').forEach(x => x.classList.toggle('active', x === b));
-    document.body.dataset.graphics = graphicsQuality;
-    lobbyToast(`Graphics: ${graphicsQuality.toUpperCase()}`);
-  }));
-  document.getElementById('returnMatchBtn').addEventListener('click', () => {
-    ui.lobbyOverlay.classList.add('hidden'); ui.pauseOverlay.classList.add('hidden');
-    state = 'playing'; syncSettingsUI();
+
+  // Missions Screen Filter & Footer Actions
+  document.querySelectorAll('[data-mfilter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      missionFilter = btn.dataset.mfilter;
+      document.querySelectorAll('[data-mfilter]').forEach(b => b.classList.toggle('active', b === btn));
+      renderMissionsScreen();
+    });
   });
-  document.getElementById('nameSaveBtn').addEventListener('click', () => {
-    const v = L.nameInput.value.replace(/[^A-Za-z0-9_ ]/g, '').trim().toUpperCase().slice(0, 12);
+  document.getElementById('missionSelectLobbyBtn')?.addEventListener('click', () => {
+    openScreen('lobby');
+    lobbyToast(`✅ Level ${selectedLevelId} ready in Lobby!`);
+  });
+  document.getElementById('missionPlayNowBtn')?.addEventListener('click', () => {
+    openScreen('lobby');
+    startLevel(selectedLevelId);
+  });
+
+  // Armory Screen Category, Sound Preview, Buy & Equip
+  document.querySelectorAll('[data-wcat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      armoryCategory = btn.dataset.wcat;
+      document.querySelectorAll('[data-wcat]').forEach(b => b.classList.toggle('active', b === btn));
+      renderArmoryScreen();
+    });
+  });
+  document.getElementById('armorySoundPreviewBtn')?.addEventListener('click', () => {
+    const w = WEAPONS[previewGunId];
+    if (!w) return;
+    audio.init();
+    audio.playGun(w.sound, 1.0);
+    lobbyToast(`🔊 ${w.name} Sound Preview`);
+  });
+  document.getElementById('armoryBuyBtn')?.addEventListener('click', () => {
+    const item = ARMORY.find(a => a.id === previewGunId);
+    if (!item || profile.ownedW.includes(item.id)) return;
+    if (profile.gold < item.gold) {
+      lobbyToast('🪙 Gold kam hai! Match khelo ya Daily Reward claim karo.');
+      return;
+    }
+    profile.gold -= item.gold;
+    profile.ownedW.push(item.id);
+    profile.weapon = item.id;
+    saveProfile();
+    audio.init();
+    audio.playPickup();
+    updateLobbyUI();
+    renderArmoryScreen();
+    lobbyToast(`🔫 ${item.id} unlocked & equipped!`);
+  });
+  document.getElementById('armoryEquipBtn')?.addEventListener('click', () => {
+    if (!profile.ownedW.includes(previewGunId) || previewGunId === 'G18') return;
+    profile.weapon = previewGunId;
+    saveProfile();
+    audio.init();
+    audio.playPickup();
+    updateLobbyUI();
+    renderArmoryScreen();
+    lobbyToast(`✅ ${previewGunId} equipped as Primary Weapon!`);
+  });
+
+  // Outfits Screen Filter, Buy & Equip
+  document.querySelectorAll('[data-ofilter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      outfitFilter = btn.dataset.ofilter;
+      document.querySelectorAll('[data-ofilter]').forEach(b => b.classList.toggle('active', b === btn));
+      renderOutfitsScreen();
+    });
+  });
+  document.getElementById('outfitBuyBtn')?.addEventListener('click', () => {
+    const out = OUTFITS.find(o => o.id === previewOutfitId);
+    if (!out || profile.ownedO.includes(out.id)) return;
+    if (out.gems) {
+      if (profile.gems < out.gems) { lobbyToast('💎 Diamonds kam hain!'); return; }
+      profile.gems -= out.gems;
+    } else {
+      if (profile.gold < out.gold) { lobbyToast('🪙 Gold kam hai!'); return; }
+      profile.gold -= out.gold;
+    }
+    profile.ownedO.push(out.id);
+    profile.outfit = out.id;
+    saveProfile();
+    audio.init();
+    audio.playPickup();
+    updateLobbyUI();
+    renderOutfitsScreen();
+    lobbyToast(`👕 ${out.name} Outfit unlocked & equipped!`);
+  });
+  document.getElementById('outfitEquipBtn')?.addEventListener('click', () => {
+    if (!profile.ownedO.includes(previewOutfitId)) return;
+    profile.outfit = previewOutfitId;
+    saveProfile();
+    audio.init();
+    audio.playPickup();
+    updateLobbyUI();
+    renderOutfitsScreen();
+    lobbyToast(`✅ ${getOutfit().name} Outfit applied to Character!`);
+  });
+
+  // Rewards Screen Side Tabs (smooth scroll to section)
+  document.querySelectorAll('[data-rtab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-rtab]').forEach(b => b.classList.toggle('active', b === btn));
+      const body = document.getElementById('rewardsScrollBody');
+      if (!body) return;
+      if (btn.dataset.rtab === 'daily') body.scrollTo({ top: 0, behavior: 'smooth' });
+      else if (btn.dataset.rtab === 'match') body.scrollTo({ top: 220, behavior: 'smooth' });
+      else body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+    });
+  });
+
+  // Settings Screen Controls & Pause Return Flow
+  document.querySelectorAll('[data-stab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-stab]').forEach(b => b.classList.toggle('active', b === btn));
+      const body = document.getElementById('settingsScrollBody');
+      if (!body) return;
+      if (btn.dataset.stab === 'controls') {
+        document.getElementById('controlsGuideSection')?.scrollIntoView({ behavior: 'smooth' });
+      } else if (btn.dataset.stab === 'graphics') {
+        body.scrollTo({ top: 180, behavior: 'smooth' });
+      } else {
+        body.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  });
+
+  document.getElementById('settingsBackBtn')?.addEventListener('click', () => {
+    document.getElementById('screenSettings').classList.add('hidden');
+    if (settingsReturnTo === 'pause' && state === 'paused') {
+      ui.pauseOverlay.classList.remove('hidden');
+    } else {
+      openScreen('lobby');
+    }
+    settingsReturnTo = 'lobby';
+  });
+
+  document.getElementById('pauseSettingsBtn')?.addEventListener('click', () => {
+    settingsReturnTo = 'pause';
+    ui.pauseOverlay.classList.add('hidden');
+    openScreen('settings');
+  });
+
+  document.getElementById('nameSaveBtn')?.addEventListener('click', () => {
+    const v = L.nameInput.value.replace(/[^A-Za-z0-9_ -]/g, '').trim().toUpperCase().slice(0, 14);
     if (!v) { lobbyToast('Naam khali nahi ho sakta'); return; }
     profile.name = v;
     saveProfile();
     updateLobbyUI();
-    lobbyToast('Naam save ho gaya ✓');
-  });
-  L.soundBtn.addEventListener('click', () => {
-    audio.muted = !audio.muted;
-    ui.soundToggleBtn.textContent = audio.muted ? '🔇' : '🔊';
-    updateLobbyUI();
-  });
-  window.addEventListener('keydown', e => {
-    if (state !== 'lobby') return;
-    if (e.target && e.target.tagName === 'INPUT') return;
-    if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); startLevel(selectedLevelId); }
-    if (e.code === 'Escape') openLobbyTab('home');
+    lobbyToast(`✅ Player Name saved: ${v}`);
   });
 
+  document.querySelectorAll('[data-speed]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      profile.speed = gameSpeedMode;
+      saveProfile();
+      lobbyToast(`⚡ Game Speed: ${gameSpeedMode.toUpperCase()}`);
+    });
+  });
+
+  document.querySelectorAll('[data-hud]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      profile.hud = hudSizeMode;
+      saveProfile();
+      lobbyToast(`📐 HUD Size: ${hudSizeMode.toUpperCase()}`);
+    });
+  });
+
+  document.querySelectorAll('[data-sound]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      audio.muted = btn.dataset.sound === 'off';
+      profile.sound = !audio.muted;
+      saveProfile();
+      renderSettingsScreen();
+      updateLobbyUI();
+      lobbyToast(audio.muted ? '🔇 Sound Muted' : '🔊 Sound Enabled');
+    });
+  });
+
+  document.querySelectorAll('[data-gfx]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.dataset.gfx;
+      profile.graphics = q;
+      window.__AR_DPR_CAP = q === 'low' ? 1 : q === 'high' ? 2 : 1.5;
+      window.__AR_WEATHER_SCALE = q === 'low' ? 0.35 : q === 'high' ? 1.0 : 0.75;
+      saveProfile();
+      resizeCanvas();
+      renderSettingsScreen();
+      lobbyToast(`🖥 Graphics Quality: ${q.toUpperCase()}`);
+    });
+  });
+
+  document.querySelectorAll('[data-touch]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      touchControlsEnabled = btn.dataset.touch === 'auto';
+      syncSettingsUI();
+      renderSettingsScreen();
+      lobbyToast(touchControlsEnabled ? '📱 Touch Controls ON' : '⌨ Touch Controls OFF');
+    });
+  });
+
+  // Profile Screen Quick Actions
+  document.getElementById('profChangeNameBtn')?.addEventListener('click', () => {
+    settingsReturnTo = 'lobby';
+    openScreen('settings');
+    setTimeout(() => L.nameInput?.focus(), 80);
+  });
+  document.getElementById('profMissionsBtn')?.addEventListener('click', () => openScreen('missions'));
+
+  L.soundBtn?.addEventListener('click', () => {
+    audio.muted = !audio.muted;
+    profile.sound = !audio.muted;
+    saveProfile();
+    updateLobbyUI();
+  });
+
+  window.addEventListener('keydown', e => {
+    if (state === 'paused' && e.code === 'Escape') {
+      const setScr = document.getElementById('screenSettings');
+      if (setScr && !setScr.classList.contains('hidden')) {
+        setScr.classList.add('hidden');
+        ui.pauseOverlay.classList.remove('hidden');
+        settingsReturnTo = 'lobby';
+      } else {
+        togglePause();
+      }
+      return;
+    }
+    if (state !== 'lobby') return;
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.code === 'Escape' && activeScreen !== 'lobby') {
+      openScreen('lobby');
+      return;
+    }
+    if (activeScreen === 'lobby' && (e.code === 'Enter' || e.code === 'Space')) {
+      e.preventDefault();
+      startLevel(selectedLevelId);
+    }
+  });
+
+
+
+  // Pose preview buttons
   const poseBar = document.getElementById('poseBar');
-  poseBar.querySelectorAll('.pose-btn').forEach(btn => {
+  poseBar?.querySelectorAll('.pose-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       audio.init();
       lobbyPose = btn.dataset.pose;
@@ -2882,7 +3555,7 @@
     });
   });
 
-  // ----- 2D Hero rendering -----
+  // ----- 2D Hero rendering (Lobby + Outfit Preview + Result Screen) -----
   let lobbyTime = 0, lobbyKick = 0, lobbyLook = 0, lobbyLookTarget = 0, lobbyCx = null;
   let lobbyPose = 'idle', lobbyPhase = 0, lobbyAmp = 0;
   const lobbyEmbers = Array.from({ length: 28 }, () => ({
@@ -3202,7 +3875,7 @@
   }
 
   function renderLobby(dt) {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, window.__AR_DPR_CAP || 2);
     const w = window.innerWidth, h = window.innerHeight;
     const pw = Math.floor(w * dpr), ph = Math.floor(h * dpr);
     if (L.canvas.width !== pw || L.canvas.height !== ph) { L.canvas.width = pw; L.canvas.height = ph; }
@@ -3217,7 +3890,7 @@
     lobbyPhase += dt * (lobbyPose === 'run' ? 12 : lobbyPose === 'walk' ? 7.5 : 0);
 
     const accent = getOutfit().color;
-    const panelOpen = !L.panel.classList.contains('hidden');
+    const panelOpen = false;
     const wantCx = panelOpen && w > 700 ? w * 0.62 : w * 0.5;
     if (lobbyCx === null) lobbyCx = wantCx;
     lobbyCx += (wantCx - lobbyCx) * Math.min(1, dt * 6);
@@ -3252,7 +3925,7 @@
     lctx.closePath(); lctx.fill();
 
     // embers
-    lobbyEmbers.slice(0, graphicsQuality === 'low' ? 8 : graphicsQuality === 'high' ? lobbyEmbers.length : 18).forEach(e => {
+    lobbyEmbers.forEach(e => {
       e.y -= e.v * dt;
       if (e.y < -0.05) { e.y = 1.05; e.x = Math.random(); }
       const ex = e.x * w + Math.sin(lobbyTime + e.ph) * 14;

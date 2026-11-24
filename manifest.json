@@ -1,39 +1,19 @@
 {
-  "name": "AR ROYAL \u2014 Battle Royale",
+  "name": "AR ROYAL - 2D Battle Royale",
   "short_name": "AR ROYAL",
-  "description": "20-Level 2D Battle Royale Campaign",
+  "description": "20-Level Landscape 2D Top-Down Battle Royale — Royal Edition",
   "id": "./index.html",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",
-  "display_override": [
-    "fullscreen",
-    "standalone"
-  ],
+  "display_override": ["fullscreen", "standalone"],
   "orientation": "landscape",
-  "background_color": "#0b1118",
-  "theme_color": "#f59e0b",
-  "categories": [
-    "games"
-  ],
+  "background_color": "#050811",
+  "theme_color": "#f5b81d",
+  "categories": ["games"],
   "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

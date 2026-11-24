@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1118" />
+  <meta name="theme-color" content="#060a14" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="AR ROYAL" />
-  <title>AR ROYAL — Battle Royale</title>
+  <title>AR ROYAL — 2D Landscape Battle Royale</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body class="hud-compact">
@@ -21,13 +21,13 @@
       <h2>Rotate to Landscape</h2>
       <p>बेहतर गेमप्ले के लिए कृपया फोन को लैंडस्केप (आड़ा) घुमाएँ।</p>
       <div class="rotate-actions">
-        <button id="rotateFullscreenBtn" class="btn btn-primary">⛶ Fullscreen Landscape</button>
-        <button id="continuePortraitBtn" class="btn btn-ghost">Continue Anyway</button>
+        <button id="rotateFullscreenBtn" class="btn-royal-gold">⛶ Fullscreen Landscape</button>
+        <button id="continuePortraitBtn" class="btn-royal-dark">Continue Anyway</button>
       </div>
     </div>
   </div>
 
-  <!-- Game Canvas -->
+  <!-- Game Canvas (2D Engine Untouched) -->
   <canvas id="gameCanvas"></canvas>
 
   <!-- Damage / Blue Zone Vignette -->
@@ -36,7 +36,6 @@
 
   <!-- In-Game Ultra-Compact Landscape HUD -->
   <div id="hud" class="hud hidden">
-    <!-- Top Left: Circular Radar Minimap -->
     <div class="hud-top-left">
       <div class="minimap-wrap">
         <canvas id="minimapCanvas" width="120" height="120"></canvas>
@@ -44,7 +43,6 @@
       </div>
     </div>
 
-    <!-- Top Center: Slim Single-Row Status Pill + Banners -->
     <div class="hud-top-center">
       <div class="status-pill">
         <span class="pill-item zone-pill" id="zoneTimerText">🛡 ZONE 00:30</span>
@@ -58,7 +56,6 @@
       <div id="alertBanner" class="alert-banner hidden"></div>
     </div>
 
-    <!-- Top Right: Micro Action Buttons + Compact Kill Feed -->
     <div class="hud-top-right">
       <div class="micro-btns">
         <button id="soundToggleBtn" class="micro-btn" title="Sound On/Off">🔊</button>
@@ -69,7 +66,6 @@
       <div id="killFeed" class="kill-feed"></div>
     </div>
 
-    <!-- Bottom Center: Slim Armor + HP Bar & 3 Compact Weapon Slots -->
     <div class="hud-bottom-center">
       <div class="bars-stack">
         <div class="bar-row armor-row">
@@ -101,12 +97,9 @@
       </div>
     </div>
 
-    <!-- Loot Prompt (Desktop & Touch) -->
     <button id="lootPromptBtn" class="loot-prompt hidden">📦 [E] Pick Up</button>
 
-    <!-- Mobile / Touch Dual-Joystick Corner Controls -->
     <div id="touchControls" class="touch-controls hidden">
-      <!-- Left Zone: Move Joystick + Sprint + Medkit -->
       <div class="touch-left">
         <div class="touch-left-btns">
           <button id="touchSprintBtn" class="t-btn t-sprint">🏃<span>RUN</span></button>
@@ -124,7 +117,6 @@
         </div>
       </div>
 
-      <!-- Right Zone: Aim/Auto-Fire Joystick + Fire + Scope + Reload -->
       <div class="touch-right">
         <div class="touch-right-btns">
           <button id="touchScopeBtn" class="t-btn t-scope">🎯<span>SCOPE</span></button>
@@ -140,220 +132,586 @@
     </div>
   </div>
 
-  <!-- ================= FF-STYLE LOBBY ================= -->
+  <!-- ================= 1. MAIN LOBBY ================= -->
   <div id="lobbyOverlay" class="ff-lobby">
     <canvas id="lobbyCanvas"></canvas>
 
-    <!-- Top Bar: Profile | Brand | Currency -->
-    <header class="ff-top">
-      <button id="profileBtn" class="ff-profile" type="button">
-        <div class="ff-avatar" id="ffAvatar">AR</div>
+    <!-- Top Royal Header -->
+    <header class="ar-header lobby-header">
+      <button id="profileBtn" class="ff-profile" type="button" title="Open Player Profile">
+        <div class="ff-avatar" id="ffAvatar">👑</div>
         <div class="ff-pinfo">
-          <div class="ff-pname" id="ffName">PLAYER</div>
+          <div class="ff-pname-row">
+            <span class="ff-pname" id="ffName">PLAYER</span>
+            <span class="crown-mini">👑</span>
+          </div>
           <div class="ff-lvrow">
-            <span class="ff-lv" id="ffLv">LV 1</span>
+            <span class="ff-lv" id="ffLv">Lv. 1</span>
             <div class="ff-xp"><div id="ffXpFill" class="ff-xp-fill"></div></div>
+            <span class="ff-xp-num" id="ffXpNum">0/150</span>
           </div>
         </div>
       </button>
 
-      <div class="ff-brand"><img src="ar-royal-logo.png" alt="AR ROYAL Crown Logo" /><span>AR ROYAL</span></div>
+      <div class="lobby-brand-wrap">
+        <img src="logo.png" alt="AR ROYAL" class="ar-logo-img" />
+      </div>
 
       <div class="ff-currency">
-        <div class="cur-chip"><span>🪙</span><b id="ffGold">0</b></div>
-        <div class="cur-chip"><span>💎</span><b id="ffGems">0</b></div>
-        <button id="installBtn" class="ff-install" type="button" title="Install AR ROYAL">📲 INSTALL</button>
+        <div class="cur-chip gold-chip" id="goldChipBtn" title="Earn Gold in Matches & Rewards">
+          <span>🪙</span><b id="ffGold">500</b><i class="plus-tag">+</i>
+        </div>
+        <div class="cur-chip gem-chip" id="gemChipBtn" title="Earn Diamonds in Rewards & First Clears">
+          <span>💎</span><b id="ffGems">50</b><i class="plus-tag">+</i>
+        </div>
+        <button id="installBtn" class="ff-install" type="button" title="Install AR ROYAL">📲</button>
         <button id="lobbyFullscreenBtn" class="ff-icon-btn" type="button" title="Fullscreen">⛶</button>
         <button id="lobbySoundBtn" class="ff-icon-btn" type="button" title="Sound">🔊</button>
+        <button id="lobbyTopSettingsBtn" class="ff-icon-btn" type="button" title="Settings">⚙</button>
       </div>
     </header>
 
-    <!-- Left Menu -->
+    <!-- Left Royal Navigation -->
     <nav class="ff-left" id="ffMenu">
-      <button class="ff-nav active" data-tab="home" type="button"><span>🏠</span><em>LOBBY</em></button>
-      <button class="ff-nav" data-tab="missions" type="button"><span>🗺</span><em>MISSION</em></button>
-      <button class="ff-nav" data-tab="armory" type="button"><span>🔫</span><em>ARMORY</em></button>
-      <button class="ff-nav" data-tab="outfit" type="button"><span>👕</span><em>OUTFIT</em></button>
-      <button class="ff-nav" data-tab="rewards" type="button"><span>🎁</span><em>REWARD</em><i id="rewardDot" class="ff-dot hidden"></i></button>
-      <button class="ff-nav" data-tab="settings" type="button"><span>⚙</span><em>SETTINGS</em></button>
+      <button class="ff-nav active" data-screen="lobby" type="button"><span>🏠</span><em>LOBBY</em></button>
+      <button class="ff-nav" data-screen="missions" type="button"><span>🎯</span><em>MISSIONS</em><i id="missionDot" class="ff-dot"></i></button>
+      <button class="ff-nav" data-screen="armory" type="button"><span>🔫</span><em>ARMORY</em></button>
+      <button class="ff-nav" data-screen="outfits" type="button"><span>👕</span><em>OUTFITS</em></button>
+      <button class="ff-nav" data-screen="rewards" type="button"><span>🎁</span><em>REWARDS</em><i id="rewardDot" class="ff-dot hidden"></i></button>
+      <button class="ff-nav" data-screen="settings" type="button"><span>⚙</span><em>SETTINGS</em></button>
     </nav>
 
-    <!-- Character name plate (under the 2D character) -->
+    <!-- Left-Bottom Campaign Banner -->
+    <button id="campaignBannerBtn" class="lobby-promo-card" type="button">
+      <span class="promo-tag">20 MAPS CAMPAIGN</span>
+      <strong>ROYAL ARENA</strong>
+      <small id="promoClearedTxt">0 / 20 Levels Cleared ▸</small>
+    </button>
+
+    <!-- Center Hero Nameplate & Pose Switcher -->
     <div class="ff-nameplate" id="ffNameplate">
       <div class="np-title" id="npTitle">ROOKIE</div>
       <div class="np-name" id="npName">PLAYER</div>
       <div class="np-gear" id="npGear">M4A1 • AMBER</div>
     </div>
 
-    <!-- Pose preview: Idle / Walk / Run -->
     <div class="pose-bar" id="poseBar">
       <button class="pose-btn active" data-pose="idle" type="button">🧍<em>IDLE</em></button>
       <button class="pose-btn" data-pose="walk" type="button">🚶<em>WALK</em></button>
       <button class="pose-btn" data-pose="run" type="button">🏃<em>RUN</em></button>
     </div>
 
-    <!-- Right: Mode Card + Squad + START -->
+    <!-- Bottom Quick Action Strip -->
+    <div class="lobby-bottom-strip">
+      <button class="strip-btn" id="stripProfileBtn" type="button">🏆 <span>RANK & STATS</span></button>
+      <button class="strip-btn" id="stripArmoryBtn" type="button">⚔️ <span>LOADOUT</span></button>
+      <button class="strip-btn" id="stripDailyBtn" type="button">📅 <span>DAILY BONUS</span></button>
+    </div>
+
+    <!-- Right Mode Card, Daily Reward Shortcut & PLAY NOW -->
     <aside class="ff-right">
       <div class="mode-tabs">
-        <button class="mode-tab active" type="button">SOLO</button>
-        <button class="mode-tab locked" type="button" disabled>DUO 🔒</button>
-        <button class="mode-tab locked" type="button" disabled>SQUAD 🔒</button>
+        <button class="mode-tab active" data-mode="solo" type="button">👤 SOLO</button>
+        <button class="mode-tab locked" data-mode="duo" type="button">🔒 DUO</button>
+        <button class="mode-tab locked" data-mode="squad" type="button">🔒 SQUAD</button>
       </div>
 
       <div class="mode-card" id="modeCard">
-        <div class="mode-top">
-          <span class="mode-badge">CAMPAIGN</span>
-          <span id="progressSummary" class="progress-chip">0/20 Cleared</span>
+        <div class="mode-map-art" id="modeMapArt">
+          <div class="map-art-top">
+            <span class="mode-badge" id="modeShapeBadge">⭕ CIRCLE</span>
+            <span id="progressSummary" class="progress-chip">0/20 Cleared</span>
+          </div>
+          <div class="map-art-center" id="modeThemeIcon">🌴</div>
+          <div class="map-art-location">
+            <span>📍 <b id="modeName">Level 1 — Bermuda Outpost</b></span>
+            <span class="swap-icon">↻</span>
+          </div>
         </div>
-        <div class="mode-name" id="modeName">Level 1 — Bermuda Outpost</div>
-        <div class="mode-desc" id="modeDesc">6 Easy Bots</div>
-        <button id="changeMissionBtn" class="mode-change" type="button">CHANGE MISSION ▸</button>
+        <div class="mode-mission-line">
+          <span>🎯</span>
+          <span id="modeDesc">Open Island + 2 Lakes • 6 Bots</span>
+        </div>
+        <button id="changeMissionBtn" class="mode-change" type="button">SELECT MISSION (20 LEVELS) ▸</button>
       </div>
 
-      <div class="squad-row">
-        <div class="squad-slot me"><span>YOU</span></div>
-        <div class="squad-slot empty"><span>＋</span></div>
-        <div class="squad-slot empty"><span>＋</span></div>
-        <div class="squad-slot empty"><span>＋</span></div>
+      <div class="lobby-daily-box">
+        <div class="ld-left">
+          <span class="ld-chest">🎁</span>
+          <div>
+            <div class="ld-title">DAILY REWARD</div>
+            <div class="ld-sub" id="lobbyDailyStatus">Ready to Claim!</div>
+          </div>
+        </div>
+        <button id="lobbyQuickClaimBtn" class="btn-royal-gold btn-xs" type="button">CLAIM</button>
       </div>
 
-      <button id="playBtn" class="ff-start" type="button">▶ START</button>
+      <button id="playBtn" class="ff-start" type="button">
+        <span>PLAY NOW »</span>
+        <small>👑 FIGHT • SURVIVE • BE THE KING 👑</small>
+      </button>
     </aside>
+  </div>
 
-    <!-- Side Panel (Mission / Armory / Outfit / Reward / Settings) -->
-    <div id="lobbyPanel" class="ff-panel hidden">
-      <div class="panel-head">
-        <span id="panelTitle">MISSION</span>
-        <button id="panelClose" class="ff-icon-btn" type="button">✕</button>
+  <!-- ================= 2. MISSIONS SCREEN (20 LEVELS) ================= -->
+  <div id="screenMissions" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
       </div>
-      <div class="panel-body">
-        <section data-panel="profile" class="hidden">
-          <div class="profile-panel-card">
-            <div class="profile-avatar-large" id="profileAvatarLarge">AR</div>
-            <div class="profile-main-info"><strong id="profileDisplayName">PLAYER</strong><span id="profileRankTitle">ROOKIE</span><div class="profile-xp-track"><i id="profileXpFill"></i></div><small id="profileXpText">0 / 150 XP</small></div>
-          </div>
-          <div class="profile-stats-grid">
-            <div><b id="profileMatches">0</b><span>MATCHES</span></div>
-            <div><b id="profileKills">0</b><span>KILLS</span></div>
-            <div><b id="profileWins">0</b><span>WINS</span></div>
-            <div><b id="profileWinRate">0%</b><span>WIN RATE</span></div>
-          </div>
-          <div class="panel-sub">ACCOUNT OVERVIEW</div>
-          <p class="profile-note">Your campaign progress, unlocked equipment and rewards are saved on this device.</p>
-        </section>
-        <section data-panel="missions" class="hidden">
-          <div class="panel-sub">SELECT MISSION (20 LEVELS)</div>
-          <div id="levelList" class="level-list"></div><button id="selectMissionBtn" class="btn btn-primary mission-select-btn" type="button">SELECT MISSION</button>
-        </section>
+      <div class="ar-title-banner">MISSIONS</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button class="btn-royal-dark btn-back" data-back="lobby" type="button">◀ Back</button>
+      </div>
+    </header>
 
-        <section data-panel="armory" class="hidden">
-          <div class="panel-sub">PRIMARY WEAPON — starts every match with this</div>
-          <div id="armoryList" class="shop-list"></div>
-        </section>
+    <div class="ar-screen-body">
+      <aside class="side-tabs side-tabs-scroll">
+        <button class="side-tab active" data-mfilter="all" type="button"><span>⚔️</span><em>All (20)</em></button>
+        <button class="side-tab" data-mfilter="current" type="button"><span>🎯</span><em>Current</em></button>
+        <button class="side-tab" data-mfilter="completed" type="button"><span>⭐</span><em>Cleared</em></button>
+        <button class="side-tab" data-mfilter="boss" type="button"><span>👑</span><em>Boss Maps</em></button>
+      </aside>
 
-        <section data-panel="outfit" class="hidden">
-          <div class="panel-sub">OUTFIT COLOR</div>
-          <div id="outfitList" class="outfit-grid"></div>
-        </section>
+      <div class="screen-main-col">
+        <div class="mission-scroll" id="missionListContainer"></div>
+        <div class="mission-footer-bar">
+          <div class="mf-info">
+            <span>🏆</span>
+            <div>
+              <strong id="selectedMissionFooterTitle">Selected: Level 1 — Bermuda Outpost</strong>
+              <small id="selectedMissionFooterMeta">Completed: 0/20 • Tap any unlocked level to select</small>
+            </div>
+          </div>
+          <div class="mf-actions">
+            <button id="missionSelectLobbyBtn" class="btn-royal-blue" type="button">Select & Lobby</button>
+            <button id="missionPlayNowBtn" class="btn-royal-gold" type="button">▶ Play Level</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        <section data-panel="rewards" class="hidden">
-          <div class="panel-sub">DAILY LOGIN REWARD</div>
-          <div class="reward-card">
-            <div class="reward-items"><span>🪙 200</span><span>💎 5</span></div>
-            <button id="claimDailyBtn" class="btn btn-primary" type="button">CLAIM</button>
-          </div>
-          <div class="panel-sub" style="margin-top:10px">MATCH REWARDS</div>
-          <ul class="reward-rules">
-            <li>Har kill: <b>+15 🪙</b> aur <b>+10 XP</b></li>
-            <li>BOOYAH (level clear): <b>+100 🪙</b> aur <b>+50 XP</b></li>
-            <li>Level pehli baar clear: <b>+5 💎</b></li>
-          </ul>
-        </section>
+  <!-- ================= 3. ARMORY SCREEN ================= -->
+  <div id="screenArmory" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
+      </div>
+      <div class="ar-title-banner">ARMORY</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button class="btn-royal-dark btn-back" data-back="lobby" type="button">◀ Back</button>
+      </div>
+    </header>
 
-        <section data-panel="settings" class="hidden">
-          <div class="panel-sub">PLAYER NAME</div>
-          <div class="name-edit">
-            <input id="nameInput" type="text" maxlength="12" placeholder="PLAYER" autocomplete="off" />
-            <button id="nameSaveBtn" class="btn btn-secondary" type="button">SAVE</button>
+    <div class="ar-screen-body armory-layout">
+      <aside class="side-tabs side-tabs-scroll">
+        <button class="side-tab active" data-wcat="all" type="button"><span>🔫</span><em>All Guns</em></button>
+        <button class="side-tab" data-wcat="rifle" type="button"><span>🎯</span><em>Rifles</em></button>
+        <button class="side-tab" data-wcat="smg" type="button"><span>⚡</span><em>SMGs</em></button>
+        <button class="side-tab" data-wcat="shotgun" type="button"><span>💥</span><em>Shotguns</em></button>
+        <button class="side-tab" data-wcat="sniper" type="button"><span>🔭</span><em>Snipers</em></button>
+        <button class="side-tab" data-wcat="sidearm" type="button"><span>🛡</span><em>Pistols</em></button>
+      </aside>
+
+      <div class="armory-scroll" id="armoryCardsList"></div>
+
+      <div class="armory-showcase">
+        <div class="showcase-head">
+          <div>
+            <h3 id="armoryGunName">M4A1</h3>
+            <p id="armoryGunSub">Balanced Assault Rifle • Primary Slot</p>
           </div>
-          <div class="panel-sub">GAME SPEED</div>
-          <div class="seg-group" id="speedSelector">
-            <button class="seg-btn" data-speed="slow" type="button">Slow</button>
-            <button class="seg-btn active" data-speed="tactical" type="button">Tactical</button>
-            <button class="seg-btn" data-speed="fast" type="button">Fast</button>
+          <span class="showcase-badge" id="armoryGunBadge">EQUIPPED</span>
+        </div>
+
+        <div class="weapon-canvas-wrap">
+          <canvas id="weaponPreviewCanvas" width="420" height="170"></canvas>
+        </div>
+
+        <div class="weapon-stats-grid">
+          <div class="wstat-row">
+            <span>Damage</span>
+            <div class="wstat-track"><div id="wStatDmgBar" class="wstat-fill"></div></div>
+            <b id="wStatDmgVal">21</b>
           </div>
-          <div class="panel-sub">HUD SIZE</div>
-          <div class="seg-group" id="hudSizeSelector">
+          <div class="wstat-row">
+            <span>Range</span>
+            <div class="wstat-track"><div id="wStatRngBar" class="wstat-fill"></div></div>
+            <b id="wStatRngVal">640</b>
+          </div>
+          <div class="wstat-row">
+            <span>Fire Rate</span>
+            <div class="wstat-track"><div id="wStatSpdBar" class="wstat-fill"></div></div>
+            <b id="wStatSpdVal">8.0/s</b>
+          </div>
+          <div class="wstat-row">
+            <span>Magazine</span>
+            <div class="wstat-track"><div id="wStatMagBar" class="wstat-fill"></div></div>
+            <b id="wStatMagVal">30</b>
+          </div>
+        </div>
+
+        <div class="armory-actions-bar">
+          <button id="armorySoundPreviewBtn" class="btn-royal-dark" type="button">🔊 Sound Preview</button>
+          <button id="armoryBuyBtn" class="btn-royal-gold" type="button">Buy 🪙 300</button>
+          <button id="armoryEquipBtn" class="btn-royal-blue" type="button">Equipped ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 4. OUTFITS SCREEN ================= -->
+  <div id="screenOutfits" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
+      </div>
+      <div class="ar-title-banner">OUTFITS</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button class="btn-royal-dark btn-back" data-back="lobby" type="button">◀ Back</button>
+      </div>
+    </header>
+
+    <div class="ar-screen-body outfits-layout">
+      <aside class="side-tabs side-tabs-scroll">
+        <button class="side-tab active" data-ofilter="all" type="button"><span>👕</span><em>All (9)</em></button>
+        <button class="side-tab" data-ofilter="owned" type="button"><span>✅</span><em>Owned</em></button>
+        <button class="side-tab" data-ofilter="gold" type="button"><span>🪙</span><em>Gold</em></button>
+        <button class="side-tab" data-ofilter="gems" type="button"><span>💎</span><em>Royal</em></button>
+      </aside>
+
+      <div class="outfit-scroll">
+        <div class="outfit-cards-grid" id="outfitCardsGrid"></div>
+      </div>
+
+      <div class="outfit-preview-panel">
+        <div class="op-canvas-wrap">
+          <canvas id="outfitPreviewCanvas" width="260" height="280"></canvas>
+        </div>
+        <div class="op-details">
+          <h3 id="outfitPreviewName">Amber</h3>
+          <p id="outfitPreviewDesc">Standard Royal Combat Suit</p>
+          <div class="op-btns">
+            <button id="outfitBuyBtn" class="btn-royal-gold" type="button">Buy</button>
+            <button id="outfitEquipBtn" class="btn-royal-blue" type="button">Equipped ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 5. REWARDS CENTER ================= -->
+  <div id="screenRewards" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
+      </div>
+      <div class="ar-title-banner">REWARDS</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button class="btn-royal-dark btn-back" data-back="lobby" type="button">◀ Back</button>
+      </div>
+    </header>
+
+    <div class="ar-screen-body">
+      <aside class="side-tabs side-tabs-scroll">
+        <button class="side-tab active" data-rtab="daily" type="button"><span>🎁</span><em>Daily</em></button>
+        <button class="side-tab" data-rtab="match" type="button"><span>🏆</span><em>Match</em></button>
+        <button class="side-tab" data-rtab="milestones" type="button"><span>👑</span><em>Milestones</em></button>
+      </aside>
+
+      <div class="reward-scroll" id="rewardsScrollBody">
+        <div class="reward-hero-banner">
+          <div>
+            <h3>DAILY ROYAL LOGIN REWARD</h3>
+            <p>Login every day to claim Gold & Diamonds directly to your account!</p>
+          </div>
+          <span class="streak-pill" id="rewardStreakBadge">Streak: Day 1</span>
+        </div>
+
+        <div class="daily-days-grid" id="dailyDaysGrid"></div>
+
+        <div class="daily-claim-bar">
+          <button id="claimDailyBtn" class="btn-royal-gold btn-lg" type="button">CLAIM TODAY'S REWARD</button>
+        </div>
+
+        <div class="match-rewards-panel">
+          <h4>⚔️ MATCH REWARDS (Auto-Added After Every Battle)</h4>
+          <div class="mr-grid">
+            <div class="mr-card"><span>💀 Every Elimination</span><b>+15 🪙 & +10 XP</b></div>
+            <div class="mr-card"><span>👑 BOOYAH / Victory</span><b>+100 🪙 & +50 XP</b></div>
+            <div class="mr-card"><span>💎 First Time Level Clear</span><b>+5 💎 Bonus</b></div>
+            <div class="mr-card"><span>🛡 Participation Bonus</span><b>+20 🪙 & +20 XP</b></div>
+          </div>
+        </div>
+
+        <div class="match-rewards-panel">
+          <h4>🎖 CAREER MILESTONE REWARDS</h4>
+          <div id="milestonesList" class="milestones-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 6. SETTINGS SCREEN ================= -->
+  <div id="screenSettings" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
+      </div>
+      <div class="ar-title-banner">SETTINGS</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button id="settingsBackBtn" class="btn-royal-dark" type="button">◀ Back</button>
+      </div>
+    </header>
+
+    <div class="ar-screen-body">
+      <aside class="side-tabs side-tabs-scroll">
+        <button class="side-tab active" data-stab="game" type="button"><span>⚙</span><em>Game</em></button>
+        <button class="side-tab" data-stab="controls" type="button"><span>🎮</span><em>Controls</em></button>
+        <button class="side-tab" data-stab="graphics" type="button"><span>🖥</span><em>Graphics</em></button>
+      </aside>
+
+      <div class="settings-scroll" id="settingsScrollBody">
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>Player Name</strong>
+            <small>Displayed in Lobby, Profile & Leaderboard</small>
+          </div>
+          <div class="sr-control name-edit">
+            <input id="nameInput" type="text" maxlength="14" placeholder="PLAYER" autocomplete="off" />
+            <button id="nameSaveBtn" class="btn-royal-gold btn-sm" type="button">SAVE</button>
+          </div>
+        </div>
+
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>Game Speed</strong>
+            <small>Adjust movement & combat pacing</small>
+          </div>
+          <div class="sr-control seg-group" id="speedSelector">
+            <button class="seg-btn" data-speed="slow" type="button">Slow (0.82x)</button>
+            <button class="seg-btn active" data-speed="tactical" type="button">Tactical (1x)</button>
+            <button class="seg-btn" data-speed="fast" type="button">Fast (1.25x)</button>
+          </div>
+        </div>
+
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>HUD Size</strong>
+            <small>Scale in-game buttons, radar & health bars</small>
+          </div>
+          <div class="sr-control seg-group" id="hudSizeSelector">
             <button class="seg-btn" data-hud="mini" type="button">Mini</button>
             <button class="seg-btn active" data-hud="compact" type="button">Compact</button>
             <button class="seg-btn" data-hud="normal" type="button">Normal</button>
           </div>
-          <div class="controls-hint">
-            <span><b>PC:</b> WASD Move • Shift Run • Mouse Aim/Fire • RMB/Q Scope • R Reload • E Loot • H Heal</span>
-            <span><b>Mobile:</b> Left joystick move • Right joystick aim/fire • FIRE • SCOPE • RLD</span>
+        </div>
+
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>Sound Effects</strong>
+            <small>Gunshots, reloads, footsteps & UI audio</small>
           </div>
-          <div class="panel-sub">AUDIO & DISPLAY</div>
-          <div class="setting-line"><span>Music / Sound</span><button id="settingsSoundBtn" class="toggle-pill active" type="button" aria-pressed="true">ON</button></div>
-          <div class="setting-line"><span>Graphics Quality</span><div class="seg-group" id="graphicsSelector"><button class="seg-btn" data-graphics="low" type="button">LOW</button><button class="seg-btn active" data-graphics="medium" type="button">MED</button><button class="seg-btn" data-graphics="high" type="button">HIGH</button></div></div>
-          <div class="setting-line"><span>Vibration</span><button id="vibrationBtn" class="toggle-pill" type="button" aria-pressed="false">OFF</button></div>
-          <button id="returnMatchBtn" class="btn btn-primary hidden" type="button">RETURN TO MATCH</button>
-        </section>
+          <div class="sr-control seg-group" id="soundSelector">
+            <button class="seg-btn active" data-sound="on" type="button">🔊 ON</button>
+            <button class="seg-btn" data-sound="off" type="button">🔇 OFF</button>
+          </div>
+        </div>
+
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>Graphics Quality</strong>
+            <small>Controls canvas resolution (DPR) & weather effects</small>
+          </div>
+          <div class="sr-control seg-group" id="graphicsSelector">
+            <button class="seg-btn" data-gfx="low" type="button">Low</button>
+            <button class="seg-btn active" data-gfx="medium" type="button">Medium</button>
+            <button class="seg-btn" data-gfx="high" type="button">High</button>
+          </div>
+        </div>
+
+        <div class="setting-row-card">
+          <div class="sr-label">
+            <strong>Mobile Touch Controls</strong>
+            <small>Show dual virtual joysticks on screen</small>
+          </div>
+          <div class="sr-control seg-group" id="touchModeSelector">
+            <button class="seg-btn active" data-touch="auto" type="button">Auto / On</button>
+            <button class="seg-btn" data-touch="off" type="button">Off</button>
+          </div>
+        </div>
+
+        <div class="controls-guide-box" id="controlsGuideSection">
+          <h4>🎮 CONTROLS GUIDE (PC & MOBILE LANDSCAPE)</h4>
+          <div class="cg-grid">
+            <div class="cg-item"><b>Move</b><span>WASD / Arrow Keys or Left Joystick</span></div>
+            <div class="cg-item"><b>Aim & Fire</b><span>Mouse Aim + Left Click or Right Aim Stick / FIRE</span></div>
+            <div class="cg-item"><b>Sprint / Run</b><span>Left Shift or 🏃 RUN Button</span></div>
+            <div class="cg-item"><b>Scope Zoom</b><span>Right Click / Q or 🎯 SCOPE Button</span></div>
+            <div class="cg-item"><b>Reload</b><span>R Key or ↻ RLD Button</span></div>
+            <div class="cg-item"><b>Loot / Medkit / Guns</b><span>E Loot • H Medkit • 1/2/3 or Wheel Switch</span></div>
+          </div>
+        </div>
       </div>
     </div>
-
-    <div id="lobbyToast" class="lobby-toast hidden"></div>
   </div>
 
-  <!-- Pause Screen -->
+  <!-- ================= 7. PLAYER PROFILE SCREEN ================= -->
+  <div id="screenProfile" class="ar-screen hidden">
+    <header class="ar-header">
+      <div class="hdr-left">
+        <img src="logo.png" alt="AR" class="hdr-logo-sm" />
+        <div class="hdr-user">
+          <span class="hdr-name" data-bind="name">PLAYER</span>
+          <span class="hdr-lv" data-bind="lv">Lv. 1</span>
+        </div>
+      </div>
+      <div class="ar-title-banner">PROFILE</div>
+      <div class="hdr-right">
+        <div class="cur-chip gold-chip"><span>🪙</span><b data-bind="gold">500</b></div>
+        <div class="cur-chip gem-chip"><span>💎</span><b data-bind="gems">50</b></div>
+        <button class="btn-royal-dark btn-back" data-back="lobby" type="button">◀ Back</button>
+      </div>
+    </header>
+
+    <div class="ar-screen-body">
+      <div class="scroll-panel profile-scroll">
+        <div class="profile-grid">
+          <div class="profile-id-card">
+            <div class="prof-top-row">
+              <div class="prof-avatar-lg" id="profAvatarLg">👑</div>
+              <div class="prof-meta">
+                <div class="prof-name-line">
+                  <h3 id="profName">PLAYER</h3>
+                  <span>👑</span>
+                </div>
+                <div class="prof-lv-tag" id="profLvTitle">Lv. 1 • ROOKIE</div>
+                <div class="prof-xp-bar"><div id="profXpFill"></div></div>
+                <small id="profXpText">0 / 150 XP</small>
+              </div>
+            </div>
+
+            <div class="avatar-picker-row" id="avatarPickerRow"></div>
+
+            <div class="prof-stats-3">
+              <div class="pstat"><span>Matches</span><strong id="profMatches">0</strong></div>
+              <div class="pstat"><span>Kills</span><strong id="profKills">0</strong></div>
+              <div class="pstat"><span>Win Rate</span><strong id="profWinRate">0%</strong></div>
+            </div>
+
+            <div class="prof-btns">
+              <button id="profChangeNameBtn" class="btn-royal-blue" type="button">✏ Change Name</button>
+              <button id="profMissionsBtn" class="btn-royal-gold" type="button">🎯 View Missions</button>
+            </div>
+          </div>
+
+          <div class="profile-rank-card">
+            <div class="rank-emblem">👑</div>
+            <div class="rank-sub">CURRENT RANK</div>
+            <div class="rank-name" id="profRankTier">BRONZE I</div>
+            <div class="rank-extra" id="profClearedLevels">0 / 20 Maps Cleared</div>
+            <div class="rank-gear-box">
+              <span>Equipped Weapon: <b id="profWeapon">M4A1</b></span>
+              <span>Active Outfit: <b id="profOutfit">Amber</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 8. PAUSE MENU ================= -->
   <div id="pauseOverlay" class="modal-overlay hidden">
-    <div class="modal-card compact-modal">
-      <h2>MATCH PAUSED</h2>
-      <div class="settings-grid">
-        <div class="setting-box">
-          <label>Game Speed</label>
-          <div class="seg-group" id="pauseSpeedSelector">
-            <button class="seg-btn" data-speed="slow">Slow</button>
-            <button class="seg-btn active" data-speed="tactical">Tactical</button>
-            <button class="seg-btn" data-speed="fast">Fast</button>
-          </div>
-        </div>
-        <div class="setting-box">
-          <label>HUD Size</label>
-          <div class="seg-group" id="pauseHudSelector">
-            <button class="seg-btn" data-hud="mini">Mini</button>
-            <button class="seg-btn active" data-hud="compact">Compact</button>
-            <button class="seg-btn" data-hud="normal">Normal</button>
-          </div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button id="resumeBtn" class="btn btn-primary">▶ Resume</button>
-        <button id="restartBtn" class="btn btn-secondary">↻ Restart Level</button>\n        <button id="pauseSettingsBtn" class="btn btn-ghost">⚙ Settings</button>
-        <button id="quitLobbyBtn" class="btn btn-ghost">🏠 Lobby</button>
+    <div class="royal-pause-modal">
+      <div class="ar-title-banner">⏸ GAME PAUSED</div>
+      <p id="pauseLevelSub" class="pause-sub">Level 1 — Bermuda Outpost</p>
+      <div class="pause-cards-row">
+        <button id="resumeBtn" class="pause-card-btn active" type="button">
+          <span class="pc-icon">▶</span>
+          <strong>Resume</strong>
+        </button>
+        <button id="restartBtn" class="pause-card-btn" type="button">
+          <span class="pc-icon">↻</span>
+          <strong>Restart Level</strong>
+        </button>
+        <button id="pauseSettingsBtn" class="pause-card-btn" type="button">
+          <span class="pc-icon">⚙</span>
+          <strong>Settings</strong>
+        </button>
+        <button id="quitLobbyBtn" class="pause-card-btn danger" type="button">
+          <span class="pc-icon">🏠</span>
+          <strong>Return to Lobby</strong>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Match End (BOOYAH / ELIMINATED) Screen -->
+  <!-- ================= 9. RESULT SCREEN ================= -->
   <div id="endOverlay" class="modal-overlay hidden">
-    <div class="modal-card end-card">
-      <div id="endBadge" class="brand-badge">MISSION COMPLETE</div>
-      <h2 id="endTitle" class="end-title">BOOYAH!</h2>
-      <p id="endSubtitle" class="end-sub">Level 1 — Bermuda Outpost Cleared</p>
-      <div class="stats-row">
-        <div class="stat-pill"><span class="stat-lbl">RANK</span><strong id="statRank">#1</strong></div>
-        <div class="stat-pill"><span class="stat-lbl">KILLS</span><strong id="statKills">0</strong></div>
-        <div class="stat-pill"><span class="stat-lbl">DAMAGE</span><strong id="statDamage">0</strong></div>
-        <div class="stat-pill"><span class="stat-lbl">TIME</span><strong id="statTime">00:00</strong></div>
+    <div class="royal-result-modal">
+      <div id="endBadge" class="ar-title-banner">RESULT SCREEN</div>
+      <h2 id="endTitle" class="end-title">VICTORY</h2>
+      <p id="endSubtitle" class="end-sub">Level 1 — Bermuda Outpost</p>
+
+      <div class="result-body-grid">
+        <div class="result-hero-box">
+          <canvas id="resultHeroCanvas" width="160" height="190"></canvas>
+        </div>
+
+        <div class="result-stats-box">
+          <div class="r-stat-row"><span>🏆 Rank</span><strong id="statRank">#1</strong></div>
+          <div class="r-stat-row"><span>💀 Kills</span><strong id="statKills">0</strong></div>
+          <div class="r-stat-row"><span>💥 Damage</span><strong id="statDamage">0</strong></div>
+          <div class="r-stat-row"><span>⏱ Time</span><strong id="statTime">00:00</strong></div>
+        </div>
+
+        <div class="result-rewards-box">
+          <div class="rr-head">EARNED REWARDS</div>
+          <div id="endReward" class="end-reward"></div>
+        </div>
       </div>
-      <div id="endReward" class="end-reward"></div>
-      <div class="modal-actions">
-        <button id="nextLevelBtn" class="btn btn-primary">Next Level ▶</button>
-        <button id="playAgainBtn" class="btn btn-secondary">↻ Replay</button>
-        <button id="endLobbyBtn" class="btn btn-ghost">🏠 Lobby</button>
+
+      <div class="result-footer-btns">
+        <button id="playAgainBtn" class="btn-royal-blue" type="button">↻ Replay</button>
+        <button id="nextLevelBtn" class="btn-royal-gold" type="button">Next Level ▶</button>
+        <button id="endLobbyBtn" class="btn-royal-dark" type="button">🏠 Lobby</button>
       </div>
     </div>
   </div>
+
+  <!-- Global Toast -->
+  <div id="lobbyToast" class="lobby-toast hidden"></div>
 
   <script src="script.js"></script>
 </body>
